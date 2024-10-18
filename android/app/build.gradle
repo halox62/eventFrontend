@@ -29,7 +29,8 @@ apply plugin: 'kotlin-android'
 apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
 
 android {
-    compileSdkVersion flutter.compileSdkVersion
+    namespace 'com.example.social_flutter_giorgio'
+    compileSdkVersion 34
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -40,9 +41,12 @@ android {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId "com.example.social_flutter_giorgio"
         minSdkVersion flutter.minSdkVersion
-        targetSdkVersion flutter.targetSdkVersion
-        versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
+        minSdkVersion 23 // Modifica questa riga
+        targetSdkVersion 33 // Puoi usare l'ultima versione del targetSdkVersion disponibile
+        versionCode 1
+        versionName "1.0"
+
     }
 
     buildTypes {
