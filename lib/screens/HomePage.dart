@@ -3,12 +3,15 @@ import 'dart:convert';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:social_flutter_giorgio/firebase_options.dart';
+import 'package:social_flutter_giorgio/screens/AuthPage.dart';
 import 'package:social_flutter_giorgio/screens/Event.dart';
 import 'package:social_flutter_giorgio/screens/profile.dart';
+import 'package:social_flutter_giorgio/screens/ScoreboardPage.dart';
 import '../auth.dart';
 import 'dart:io';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -23,7 +26,7 @@ Future<void> main() async {
     androidProvider: AndroidProvider.debug,
     appleProvider: AppleProvider.appAttest,
   );
-  runApp(Homepage());
+  runApp(const Homepage());
 }
 
 class Homepage extends StatefulWidget {
@@ -37,7 +40,16 @@ class _HomepageState extends State<Homepage> {
   File? _capturedImage;
   List<String> images = [];
   String? userName;
+  String? userEmail;
+  String? token;
+  String? point;
+  String? photo;
   String? profileImageUrl;
+  List<dynamic> CodeEventList = [];
+  double? eventLatitude;
+  double? eventLongitude;
+  bool hasError = false;
+  String host = "127.0.0.1:5000";
 
   bool isLoading = true;
 
@@ -47,9 +59,21 @@ class _HomepageState extends State<Homepage> {
     _initializeData();
   }
 
+  Future<void> _checkTokenValidity(String message) async {
+    message.toLowerCase();
+    if (message.contains("token")) {
+      signOut();
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const AuthPage()),
+      );
+    }
+  }
+
   Future<void> _initializeData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? userEmail = prefs.getString('userEmail');
+    userEmail = prefs.getString('userEmail');
+    token = prefs.getString('jwtToken');
 
     if (userEmail != null) {
       await fetchProfileData(userEmail);
@@ -65,10 +89,42 @@ class _HomepageState extends State<Homepage> {
     await Auth().signOut();
   }
 
+  Future<void> _fetchEventCoordinates(String code) async {
+    final url = Uri.parse('http://' + host + '/get_coordinate');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    try {
+      final body = jsonEncode({
+        'code': code,
+      });
+
+      final response = await http.post(
+        url,
+        headers: headers,
+        body: body,
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          eventLatitude = double.tryParse(data['latitude'].toString()) ?? 0.0;
+          eventLongitude = double.tryParse(data['longitude'].toString()) ?? 0.0;
+        });
+      } else {
+        var errorData = jsonDecode(response.body);
+        _checkTokenValidity(errorData['msg']);
+        throw Exception('Failed to load event coordinates');
+      }
+    } catch (e) {
+      print("Errore nel recuperare le coordinate dell'evento: $e");
+    }
+  }
+
   Future<void> event() async {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => EventPage()),
+      MaterialPageRoute(builder: (context) => const EventCalendar()),
     );
   }
 
@@ -84,20 +140,22 @@ class _HomepageState extends State<Homepage> {
   }
 
   Future<void> uploadImage(File imageFile) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? userEmail = prefs.getString('userEmail');
-
     var request = http.MultipartRequest(
       'POST',
-      Uri.parse('http://10.0.2.2:5000/upload'),
+      Uri.parse('http://' + host + '/upload'),
     );
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
 
     if (userEmail != null) {
-      request.fields['email'] = userEmail;
+      request.fields['email'] = userEmail!;
     }
 
     request.files
         .add(await http.MultipartFile.fromPath('file', imageFile.path));
+    request.headers.addAll(headers);
 
     var response = await request.send();
 
@@ -106,51 +164,234 @@ class _HomepageState extends State<Homepage> {
       var jsonResponse = jsonDecode(responseData);
       print('File URL: ${jsonResponse['file_url']}');
     } else {
+      final errorBody = await response.stream.bytesToString();
+      var errorData = jsonDecode(errorBody);
+      _checkTokenValidity(errorData['msg']);
       print('Upload failed');
     }
+  }
+
+  Future<List<dynamic>?> checkUserEvents() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    userEmail = prefs.getString('userEmail');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+
+    if (userEmail != null) {
+      try {
+        final response = await http.get(
+            Uri.parse('http://' + host + '/getEventCode?email=$userEmail'),
+            headers: headers);
+
+        if (response.statusCode == 200) {
+          Map<String, dynamic> jsonResponse = json.decode(response.body);
+          CodeEventList = jsonResponse['event_codes'];
+          return CodeEventList;
+        } else {
+          var errorData = jsonDecode(response.body);
+          _checkTokenValidity(errorData['msg']);
+          print('Failed to load dates: ${response.statusCode}');
+        }
+      } catch (e) {
+        print('Error: $e');
+      }
+    }
+    return null;
+  }
+
+  Future<void> uploadImageForEvent(String eventCode) async {
+    String message;
+    await _fetchEventCoordinates(eventCode);
+    PermissionStatus permission = await Permission.location.request();
+
+    if (permission.isGranted) {
+      // Il permesso è stato concesso
+      // Ottieni la posizione corrente del dispositivo
+      Position currentPosition = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+
+      // Calcola la distanza tra la posizione corrente e quella dell'evento
+      double distance = Geolocator.distanceBetween(
+        currentPosition.latitude,
+        currentPosition.longitude,
+        eventLatitude!,
+        eventLongitude!,
+      );
+
+      if (distance <= 1000) {
+        message = 'Posizione ok';
+        if (_capturedImage != null) {
+          final headers = {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          };
+          var request = http.MultipartRequest(
+            'POST',
+            Uri.parse('http://' + host + '/uploadEventImage'),
+          );
+          request.headers.addAll(headers);
+
+          request.fields['eventCode'] = eventCode;
+          request.fields['email'] = userEmail!;
+          request.files.add(await http.MultipartFile.fromPath(
+            'image',
+            _capturedImage!.path,
+          ));
+
+          var response = await request.send();
+
+          if (response.statusCode == 200) {
+            print('Foto caricata con successo');
+          } else {
+            final errorBody = await response.stream.bytesToString();
+            var errorData = jsonDecode(errorBody);
+            _checkTokenValidity(errorData['msg']);
+            print('Errore nel caricamento della foto');
+          }
+        }
+      } else {
+        message = 'Sei troppo lontano dall\'evento';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    } else if (permission.isDenied) {
+      print("Permesso negato. Non è possibile accedere alla posizione.");
+      // Potresti mostrare un messaggio all'utente per spiegare che è necessario il permesso
+    } else if (permission.isPermanentlyDenied) {
+      // Il permesso è stato negato in modo permanente, apri le impostazioni dell'app
+      openAppSettings();
+    }
+  }
+
+  void showEventsDialog(List<dynamic> events) {
+    final rootContext = context;
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Seleziona un evento'),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: [
+                for (var i = 0; i < events.length; i++)
+                  GestureDetector(
+                    onTap: () async {
+                      await uploadImageForEvent(events[i]);
+                      await uploadImage(_capturedImage!);
+                      Navigator.of(context).pop(); // Chiudi il popup
+                      ScaffoldMessenger.of(rootContext).showSnackBar(
+                        SnackBar(
+                          content:
+                              Text('Foto caricata per l\'evento ${events[i]}'),
+                        ),
+                      );
+                    },
+                    child: ListTile(
+                      title: Text('Evento: ${events[i]}'),
+                      // subtitle: Text('Data: ${events[i]['eventDate']}'),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void onTabTapped() async {
     var index = 1;
     if (index == 1) {
-      // Quando si clicca su "Add", apri la fotocamera per scattare una foto
+      // Scatta una foto
       final image = await takePicture();
       if (image != null) {
         setState(() {
           _capturedImage = image;
         });
 
-        await uploadImage(_capturedImage!);
+        final isEnrolledInEvents = await checkUserEvents();
+
+        if (isEnrolledInEvents != null) {
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text('Caricare foto in un evento?'),
+                content:
+                    const Text('Sei iscritto a eventi. Vuoi caricare la foto?'),
+                actions: <Widget>[
+                  TextButton(
+                    child: const Text('No'),
+                    onPressed: () async {
+                      await uploadImage(_capturedImage!);
+                      Navigator.of(context)
+                          .pop(); // Chiudi popup senza fare nulla
+                    },
+                  ),
+                  TextButton(
+                    child: const Text('Sì'),
+                    onPressed: () async {
+                      Navigator.of(context).pop();
+                      showEventsDialog(isEnrolledInEvents);
+
+                      // Mostra conferma di caricamento
+                      //ScaffoldMessenger.of(context).showSnackBar(
+                      //SnackBar(
+                      //   content: Text(
+                      //     'Foto caricata con successo negli eventi!')),
+                      //  );
+                    },
+                  ),
+                ],
+              );
+            },
+          );
+        } else {
+          // Se non sei iscritto ad eventi, carica direttamente la foto o mostra un messaggio
+          await uploadImage(_capturedImage!);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Foto caricata senza evento associato')),
+          );
+        }
       }
     }
+
     if (index == 2) {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => ProfilePage()),
+        MaterialPageRoute(builder: (context) => const ProfilePage()),
       );
     }
   }
 
-  Future<void> fetchImages(String email) async {
-    final url = Uri.parse('http://10.0.2.2:5000/getImage');
+  Future<void> fetchImages(String? email) async {
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    final url = Uri.parse('http://' + host + '/getImage');
 
     try {
-      // Prepara il corpo della richiesta
       final response = await http.post(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: jsonEncode({'email': email}),
       );
 
-      // Controlla se la risposta è andata a buon fine
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        photo = "true";
         setState(() {
-          images = List<String>.from(
-              data['images']); // Aggiorna la lista delle immagini
+          images = List<String>.from(data['images']);
         });
       } else {
-        print('Errore: ${response.statusCode}');
+        var errorData = jsonDecode(response.body);
+        _checkTokenValidity(errorData['msg']);
         print(response.body);
       }
     } catch (error) {
@@ -158,18 +399,15 @@ class _HomepageState extends State<Homepage> {
     }
   }
 
-  Future<void> fetchProfileData(String userEmail) async {
+  Future<void> fetchProfileData(String? userEmail) async {
     try {
-      if (userEmail == null) {
-        print('No email found. User may not be logged in.');
-        return;
-      }
-
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
       final response = await http.post(
-        Uri.parse('http://10.0.2.2:5000/profile'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        Uri.parse('http://' + host + '/profile'),
+        headers: headers,
         body: jsonEncode({
           'email': userEmail,
         }),
@@ -182,10 +420,13 @@ class _HomepageState extends State<Homepage> {
           setState(() {
             userName = data['userName'];
             profileImageUrl = data['profileImageUrl'];
+            point = data['point'];
             isLoading = false;
           });
         }
       } else {
+        var errorData = jsonDecode(response.body);
+        _checkTokenValidity(errorData['msg']);
         throw Exception('Failed to load profile data');
       }
     } catch (error) {
@@ -198,11 +439,51 @@ class _HomepageState extends State<Homepage> {
     }
   }
 
+  Future<bool> _deletePhoto(String photoUrl) async {
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    final url = Uri.parse('http://' + host + '/delete_photo_by_url');
+    try {
+      final response = await http.post(
+        url,
+        headers: headers,
+        body: json.encode({'image_url': photoUrl}), // Invia l'URL della foto
+      );
+
+      if (response.statusCode == 200) {
+        // Rimuovi la foto dalla lista locale
+        setState(() {
+          images.remove(photoUrl); // Rimuovi usando l'URL della foto
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Foto eliminata con successo')),
+        );
+        return true;
+      } else {
+        var errorData = jsonDecode(response.body);
+        _checkTokenValidity(errorData['msg']);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Errore: impossibile eliminare la foto')),
+        );
+        return false;
+      }
+    } catch (error) {
+      // Gestione errori di rete
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Errore di connessione')),
+      );
+      return false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: TextField(
+        title: const TextField(
             decoration: InputDecoration(
           hintText: 'Search...',
           prefixIcon: Icon(Icons.search),
@@ -210,7 +491,7 @@ class _HomepageState extends State<Homepage> {
         )),
         leading: Builder(
           builder: (context) => IconButton(
-            icon: Icon(Icons.menu),
+            icon: const Icon(Icons.menu),
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
@@ -232,29 +513,33 @@ class _HomepageState extends State<Homepage> {
               ),
             ),
             ListTile(
-              leading: Icon(Icons.home),
-              title: Text('Home'),
+              leading: const Icon(Icons.home),
+              title: const Text('Home'),
               onTap: () {
                 Navigator.pop(context);
               },
             ),
             ListTile(
-              leading: Icon(Icons.settings),
-              title: Text('Settings'),
+              leading: const Icon(Icons.score_outlined),
+              title: const Text('Scoreboard'),
               onTap: () {
-                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const ScoreboardPage()),
+                );
               },
             ),
             ListTile(
-              leading: Icon(Icons.event),
-              title: Text('Event'),
+              leading: const Icon(Icons.event),
+              title: const Text('Event'),
               onTap: () {
                 event();
               },
             ),
             ListTile(
-              leading: Icon(Icons.logout),
-              title: Text('Logout'),
+              leading: const Icon(Icons.logout),
+              title: const Text('Logout'),
               onTap: () {
                 signOut();
               },
@@ -271,21 +556,36 @@ class _HomepageState extends State<Homepage> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircleAvatar(
-                    radius: 40,
-                    backgroundImage: profileImageUrl != null
-                        ? NetworkImage(profileImageUrl!)
-                        : null, // Mostra l'immagine del profilo se disponibile
-                    child: profileImageUrl == null
-                        ? Icon(Icons.person,
-                            size: 40) // Icona di default se non c'è immagine
-                        : null,
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 40,
+                        backgroundImage: profileImageUrl != null
+                            ? NetworkImage(profileImageUrl!)
+                            : null,
+                        child: profileImageUrl == null
+                            ? const Icon(Icons.person, size: 40)
+                            : null,
+                      ),
+                      const SizedBox(width: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            userName ?? 'Unknown User',
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  SizedBox(width: 16),
+                  const Spacer(),
                   Text(
-                    userName ??
-                        'Unknown User', // Mostra il nome dell'utente o un valore di default
-                    style: TextStyle(
+                    point ?? 'Unknown Point',
+                    style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
@@ -294,60 +594,100 @@ class _HomepageState extends State<Homepage> {
               ),
             ),
             Expanded(
-              child: GridView.builder(
-                padding: const EdgeInsets.all(10),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2, // Numero di colonne
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 8,
-                ),
-                itemCount: images.length, // Usa la lista 'images'
-                itemBuilder: (context, index) {
-                  return Image.network(
-                    images[index], // Mostra ogni immagine dalla lista
-                    fit: BoxFit.cover,
-                  );
-                },
-              ),
-            ),
+              child: images.isNotEmpty
+                  ? GridView.builder(
+                      padding: const EdgeInsets.all(10),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 8,
+                        mainAxisSpacing: 8,
+                      ),
+                      itemCount: images.length,
+                      itemBuilder: (context, index) {
+                        return Stack(
+                          children: [
+                            // Immagine
+                            Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              child: Image.network(
+                                images[index],
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: double.infinity,
+                              ),
+                            ),
+                            // Pulsante di eliminazione
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: GestureDetector(
+                                onTap: () async {
+                                  bool isDeleted =
+                                      await _deletePhoto(images[index]);
+                                  if (isDeleted) {
+                                    setState(() {
+                                      images.removeAt(index);
+                                    });
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.5),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.delete,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    )
+                  : const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.photo_library_outlined,
+                            size: 80,
+                            color: Colors.grey,
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            'Nessuna foto disponibile',
+                            style: TextStyle(fontSize: 18, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+            )
           ],
         ),
       ),
-      floatingActionButton: Container(
-        width: 100.0, // Imposta la larghezza desiderata
-        height: 60.0, // Imposta l'altezza desiderata
+      floatingActionButton: SizedBox(
+        width: 100.0,
+        height: 60.0,
         child: FloatingActionButton(
           onPressed: onTabTapped,
-          child: Icon(Icons.add_a_photo),
+          child: const Icon(Icons.add_a_photo),
           backgroundColor: Colors.amber[800],
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
-        shape: CircularNotchedRectangle(),
+        shape: const CircularNotchedRectangle(),
         notchMargin: 6.0,
         child: Container(height: 60.0),
       ),
-      /*bottomNavigationBar: BottomNavigationBar(
-        onTap: onTabTapped, // Collega il metodo onTabTapped per gestire i tap
-        currentIndex: _currentIndex, // Stato corrente del bottone selezionato
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.add),
-            label: 'Add',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.account_circle_outlined),
-            label: 'profile',
-          ),
-        ],
-      
-        selectedItemColor: Colors.amber[800],
-      ),*/
     );
   }
 }

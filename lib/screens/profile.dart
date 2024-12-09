@@ -1,18 +1,25 @@
-import 'dart:convert'; // Per convertire le risposte JSON
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:social_flutter_giorgio/auth.dart';
+import 'package:social_flutter_giorgio/screens/AuthPage.dart';
 
 class ProfilePage extends StatefulWidget {
+  const ProfilePage({Key? key}) : super(key: key);
+
   @override
   _ProfilePageState createState() => _ProfilePageState();
 }
 
 class _ProfilePageState extends State<ProfilePage> {
   String? userName;
+  String? userEmail;
   String? profileImageUrl;
   List<String> images = [];
   bool isLoading = true;
+  String? token;
+  String host = "127.0.0.1:5000";
 
   @override
   void initState() {
@@ -20,13 +27,25 @@ class _ProfilePageState extends State<ProfilePage> {
     _initializeData();
   }
 
+  Future<void> _checkTokenValidity(String message) async {
+    message.toLowerCase();
+    if (message.contains("token")) {
+      await Auth().signOut();
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const AuthPage()),
+      );
+    }
+  }
+
   Future<void> _initializeData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? userEmail = prefs.getString('userEmail');
+    userEmail = prefs.getString('userEmail');
+    token = prefs.getString('jwtToken');
 
     if (userEmail != null) {
-      await fetchProfileData(userEmail);
-      await fetchImages(userEmail);
+      await fetchProfileData(userEmail!);
+      await fetchImages(userEmail!);
     } else {
       setState(() {
         isLoading = false;
@@ -36,16 +55,13 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> fetchProfileData(String userEmail) async {
     try {
-      if (userEmail == null) {
-        print('No email found. User may not be logged in.');
-        return;
-      }
-
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
       final response = await http.post(
-        Uri.parse('http://10.0.2.2:5000/profile'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        Uri.parse('http://' + host + '/profile'),
+        headers: headers,
         body: jsonEncode({
           'email': userEmail,
         }),
@@ -62,6 +78,8 @@ class _ProfilePageState extends State<ProfilePage> {
           });
         }
       } else {
+        var errorData = jsonDecode(response.body);
+        _checkTokenValidity(errorData['msg']);
         throw Exception('Failed to load profile data');
       }
     } catch (error) {
@@ -75,13 +93,16 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> fetchImages(String email) async {
-    final url = Uri.parse('http://10.0.2.2:5000/getImage');
-
+    final url = Uri.parse('http://' + host + '/getImage');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
     try {
       // Prepara il corpo della richiesta
       final response = await http.post(
         url,
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: jsonEncode({'email': email}),
       );
 
@@ -93,6 +114,8 @@ class _ProfilePageState extends State<ProfilePage> {
               data['images']); // Aggiorna la lista delle immagini
         });
       } else {
+        var errorData = jsonDecode(response.body);
+        _checkTokenValidity(errorData['msg']);
         print('Errore: ${response.statusCode}');
         print(response.body);
       }
@@ -105,10 +128,10 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Profile'),
+        title: const Text('Profile'),
       ),
       body: isLoading
-          ? Center(
+          ? const Center(
               child:
                   CircularProgressIndicator()) // Mostra un indicatore di caricamento
           : Column(
@@ -124,16 +147,16 @@ class _ProfilePageState extends State<ProfilePage> {
                             ? NetworkImage(profileImageUrl!)
                             : null, // Mostra l'immagine del profilo se disponibile
                         child: profileImageUrl == null
-                            ? Icon(Icons.person,
+                            ? const Icon(Icons.person,
                                 size:
                                     40) // Icona di default se non c'è immagine
                             : null,
                       ),
-                      SizedBox(width: 16),
+                      const SizedBox(width: 16),
                       Text(
                         userName ??
                             'Unknown User', // Mostra il nome dell'utente o un valore di default
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                         ),
@@ -144,15 +167,16 @@ class _ProfilePageState extends State<ProfilePage> {
                 Expanded(
                   child: GridView.builder(
                     padding: const EdgeInsets.all(10),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3, // Numero di colonne
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
                       crossAxisSpacing: 8,
                       mainAxisSpacing: 8,
                     ),
-                    itemCount: images.length, // Usa la lista 'images'
+                    itemCount: images.length,
                     itemBuilder: (context, index) {
                       return Image.network(
-                        images[index], // Mostra ogni immagine dalla lista
+                        images[index],
                         fit: BoxFit.cover,
                       );
                     },

@@ -1,6 +1,1 @@
-import 'package:flutter/material.dart';
-
-class RouterGenerator{
-
-
-}
+class RouterGenerator {}

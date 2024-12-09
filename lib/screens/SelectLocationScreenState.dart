@@ -4,19 +4,22 @@ import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class SelectLocationScreen extends StatefulWidget {
+  const SelectLocationScreen({Key? key}) : super(key: key);
+
   @override
   _SelectLocationScreenState createState() => _SelectLocationScreenState();
 }
 
 class _SelectLocationScreenState extends State<SelectLocationScreen> {
   GoogleMapController? _controller;
-  LatLng? selectedLocation; // Posizione selezionata
-  LatLng? currentLocation; // Posizione corrente
+  LatLng? selectedLocation;
+  LatLng? currentLocation;
+  String host = "127.0.0.1:5000";
 
   @override
   void initState() {
     super.initState();
-    _getCurrentLocation(); // Chiamata per ottenere la posizione all'inizio
+    _getCurrentLocation();
   }
 
   Future<void> _getCurrentLocation() async {
@@ -24,19 +27,45 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
 
     if (status.isDenied) {
       status = await Permission.location.request();
-      if (status.isDenied) return; // Esci se i permessi vengono negati
+      if (status.isDenied) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Permessi per la posizione negati.')),
+        );
+        return;
+      }
     }
 
-    // ignore: deprecated_member_use
-    Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high);
-    setState(() {
-      currentLocation = LatLng(position.latitude, position.longitude);
-    });
+    if (status.isPermanentlyDenied) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+              'I permessi per la posizione sono disabilitati. Abilitali nelle impostazioni.'),
+          action: SnackBarAction(
+            label: 'Impostazioni',
+            onPressed: () {
+              openAppSettings();
+            },
+          ),
+        ),
+      );
+      return;
+    }
 
-    // Anima la mappa sulla posizione attuale se il controller è disponibile
-    if (_controller != null) {
-      _controller!.animateCamera(CameraUpdate.newLatLng(currentLocation!));
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+
+      setState(() {
+        currentLocation = LatLng(position.latitude, position.longitude);
+      });
+
+      if (_controller != null) {
+        _controller!.animateCamera(CameraUpdate.newLatLng(currentLocation!));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Errore nell\'ottenere la posizione: $e')),
+      );
     }
   }
 
@@ -50,9 +79,9 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Mappa')),
+      appBar: AppBar(title: const Text('Mappa')),
       body: currentLocation == null
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : GoogleMap(
               onMapCreated: _onMapCreated,
               initialCameraPosition: CameraPosition(
@@ -61,39 +90,31 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
               ),
               markers: _createMarkers(),
               onTap: (LatLng location) {
-                // Chiudi la mappa e ritorna la posizione selezionata
-                Navigator.pop(context, location);
+                setState(() {
+                  selectedLocation = location;
+                });
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  Navigator.pop(context, location);
+                });
               },
             ),
     );
   }
 
-  // Funzione per creare i marcatori
   Set<Marker> _createMarkers() {
-    final markers = <Marker>{};
-
-    // Aggiungi un marcatore per la posizione corrente
-    if (currentLocation != null) {
-      markers.add(
+    return {
+      if (currentLocation != null)
         Marker(
-          markerId: MarkerId('current-location'),
+          markerId: const MarkerId('current-location'),
           position: currentLocation!,
-          infoWindow: InfoWindow(title: 'Posizione Attuale'),
+          infoWindow: const InfoWindow(title: 'Posizione Attuale'),
         ),
-      );
-    }
-
-    // Aggiungi un marcatore per la posizione selezionata
-    if (selectedLocation != null) {
-      markers.add(
+      if (selectedLocation != null)
         Marker(
-          markerId: MarkerId('selected-location'),
+          markerId: const MarkerId('selected-location'),
           position: selectedLocation!,
-          infoWindow: InfoWindow(title: 'Posizione Selezionata'),
+          infoWindow: const InfoWindow(title: 'Posizione Selezionata'),
         ),
-      );
-    }
-
-    return markers;
+    };
   }
 }

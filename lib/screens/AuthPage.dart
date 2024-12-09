@@ -24,6 +24,7 @@ class _AuthPageState extends State<AuthPage> {
   final TextEditingController _userName = TextEditingController();
   File? _profileImage;
   bool isLogin = true;
+  String host = "127.0.0.1:5000";
 
   final ImagePicker _picker = ImagePicker();
 
@@ -31,9 +32,13 @@ class _AuthPageState extends State<AuthPage> {
     try {
       await Auth().signInWithEmailAndPassword(
           email: _email.text, password: _password.text);
-      // Salva l'email nelle SharedPreferences
+
+      User? user = FirebaseAuth.instance.currentUser;
+      String? token = await user?.getIdToken();
+
       SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString('userEmail', _email.text);
+      await prefs.setString('jwtToken', token!);
     } on FirebaseAuthException catch (error) {
       print('Error: ${error.message}');
     }
@@ -41,41 +46,37 @@ class _AuthPageState extends State<AuthPage> {
 
   Future<void> createUser() async {
     try {
-      // Autenticazione con Firebase
       await Auth().createUserWithEmailAndPassword(
           email: _email.text, password: _password.text);
 
-      // Crea una richiesta multipart
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://10.0.2.2:5000/register'),
+        Uri.parse('http://' + host + '/register'),
       );
 
-      // Aggiungi i campi dell'utente
       request.fields['email'] = _email.text;
       request.fields['userName'] = _userName.text;
 
-      // Aggiungi il file immagine alla richiesta, se disponibile
       if (_profileImage != null) {
         request.files.add(await http.MultipartFile.fromPath(
           'profileImage',
           _profileImage!.path,
         ));
       }
-
-      // Invia la richiesta e attendi la risposta
       var response = await request.send();
 
-      // Controlla lo stato della risposta
-      if (response.statusCode == 201) {
-        var responseData = await response.stream.bytesToString();
-        print('Success: $responseData');
-        // Salva l'email nelle SharedPreferences
+      if (response.statusCode == 200) {
+        await response.stream.bytesToString();
         SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setString('userEmail', _email.text);
-      } else {
-        print(
-            'Failed: ${response.statusCode}, Response: ${await response.stream.bytesToString()}');
+
+        User? user = FirebaseAuth.instance.currentUser;
+        String? token = await user?.getIdToken();
+
+        prefs = await SharedPreferences.getInstance();
+        await prefs.setString('userEmail', _email.text);
+
+        await prefs.setString('jwtToken', token!);
       }
     } catch (e) {
       log('Errore: $e');
@@ -97,8 +98,7 @@ class _AuthPageState extends State<AuthPage> {
   Future<String> _uploadImageToFirebase(File imageFile) async {
     try {
       FirebaseStorage storage = FirebaseStorage.instance;
-      String fileName =
-          'profile_images/${_email.text}.png'; // Salva con l'email
+      String fileName = 'profile_images/${_email.text}.png';
       Reference ref = storage.ref().child(fileName);
       UploadTask uploadTask = ref.putFile(imageFile);
       TaskSnapshot snapshot = await uploadTask;
@@ -118,16 +118,16 @@ class _AuthPageState extends State<AuthPage> {
             child: Wrap(
               children: <Widget>[
                 ListTile(
-                  leading: Icon(Icons.photo_library),
-                  title: Text('Galleria'),
+                  leading: const Icon(Icons.photo_library),
+                  title: const Text('Galleria'),
                   onTap: () {
                     _pickImage(ImageSource.gallery);
                     Navigator.of(context).pop();
                   },
                 ),
                 ListTile(
-                  leading: Icon(Icons.photo_camera),
-                  title: Text('Fotocamera'),
+                  leading: const Icon(Icons.photo_camera),
+                  title: const Text('Fotocamera'),
                   onTap: () {
                     _pickImage(ImageSource.camera);
                     Navigator.of(context).pop();
@@ -142,60 +142,160 @@ class _AuthPageState extends State<AuthPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          title: const Text('AuthPage'),
-        ),
-        body: Column(
-          children: [
-            TextField(
-              controller: _email,
-              decoration: InputDecoration(label: Text('Email')),
-            ),
-            TextField(
-              controller: _password,
-              obscureText: true,
-              decoration: InputDecoration(label: Text('Password')),
-            ),
-            if (!isLogin) // Mostra questi campi solo quando si sta registrando
-              Column(
+      appBar: AppBar(
+        title: const Text('Profile'),
+        backgroundColor: Colors.black,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              _profileImage != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(50.0),
+                      child: Image.file(
+                        _profileImage!,
+                        height: 120,
+                        width: 120,
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                  : Container(
+                      height: 120,
+                      width: 120,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.person,
+                          size: 60, color: Colors.black),
+                    ),
+              const SizedBox(height: 32),
+              Stack(
                 children: [
-                  TextField(
-                    controller: _userName,
-                    decoration: InputDecoration(label: Text('Nome utente')),
+                  Column(
+                    children: [
+                      // Campo per email
+                      TextField(
+                        controller: _email,
+                        decoration: InputDecoration(
+                          labelText: 'Email',
+                          labelStyle: const TextStyle(color: Colors.white),
+                          fillColor: Colors.black45,
+                          filled: true,
+                          prefixIcon:
+                              const Icon(Icons.email, color: Colors.white),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8.0),
+                            borderSide: const BorderSide(color: Colors.white),
+                          ),
+                        ),
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      const SizedBox(height: 16),
+                      // Campo per password
+                      TextField(
+                        controller: _password,
+                        obscureText: true,
+                        decoration: InputDecoration(
+                          labelText: 'Password',
+                          labelStyle: const TextStyle(color: Colors.white),
+                          fillColor: Colors.black45,
+                          filled: true,
+                          prefixIcon:
+                              const Icon(Icons.lock, color: Colors.white),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8.0),
+                            borderSide: const BorderSide(color: Colors.white),
+                          ),
+                        ),
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      const SizedBox(height: 16),
+                      if (!isLogin) // Mostra questi campi solo quando si sta registrando
+                        Column(
+                          children: [
+                            // Campo per nome utente
+                            TextField(
+                              controller: _userName,
+                              decoration: InputDecoration(
+                                labelText: 'Nome utente',
+                                labelStyle:
+                                    const TextStyle(color: Colors.white),
+                                fillColor: Colors.black45,
+                                filled: true,
+                                prefixIcon: const Icon(Icons.person,
+                                    color: Colors.white),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8.0),
+                                  borderSide:
+                                      const BorderSide(color: Colors.white),
+                                ),
+                              ),
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                            const SizedBox(height: 16),
+                            // Selezione foto profilo
+                            ElevatedButton(
+                              onPressed: () {
+                                _showPicker(
+                                    context); // Mostra il bottom sheet per scegliere
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.greenAccent,
+                                minimumSize: const Size(double.infinity, 50),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16.0),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8.0),
+                                ),
+                              ),
+                              child: const Text('Seleziona foto profilo'),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                        ),
+                    ],
                   ),
-                  ElevatedButton(
-                    onPressed: () {
-                      _showPicker(
-                          context); // Mostra il bottom sheet per scegliere
-                    },
-                    child: Text('Seleziona foto profilo'),
-                  ),
-                  _profileImage != null
-                      ? Image.file(
-                          _profileImage!,
-                          height: 100,
-                          width: 100,
-                        )
-                      : Container(), // Mostra l'immagine selezionata
                 ],
               ),
-            ElevatedButton(
-              onPressed: () {
-                isLogin ? signIn() : createUser();
-              },
-              child: Text(isLogin ? 'Accedi' : 'Registrati'),
-            ),
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  isLogin = !isLogin;
-                });
-              },
-              child: Text(isLogin
-                  ? 'Non hai un account? Registrati'
-                  : 'Hai un account? Accedi'),
-            )
-          ],
-        ));
+              // Pulsante di login/registrazione
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  isLogin ? signIn() : createUser();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.greenAccent,
+                  minimumSize: const Size(double.infinity, 50),
+                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                ),
+                child: Text(isLogin ? 'Accedi' : 'Registrati'),
+              ),
+              const SizedBox(height: 16),
+              // Pulsante per cambiare tra login e registrazione
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    isLogin = !isLogin;
+                  });
+                },
+                child: Text(
+                  isLogin
+                      ? 'Non hai un account? Registrati'
+                      : 'Hai un account? Accedi',
+                  style: const TextStyle(color: Colors.blueAccent),
+                ),
+              )
+            ],
+          ),
+        ),
+      ),
+      backgroundColor: Colors.black87, // Colore di sfondo del login
+    );
   }
 }

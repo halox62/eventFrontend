@@ -5,8 +5,7 @@ import 'package:social_flutter_giorgio/screens/HomePage.dart';
 import 'auth.dart';
 import 'firebase_options.dart';
 
-
-void main() async{
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
@@ -39,24 +38,21 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title:'app',
+      title: 'app',
       theme: ThemeData(),
       home: StreamBuilder(
         stream: Auth().authStateChanges,
-        builder: (context, snapshot){
-          if(snapshot.hasData){
-            return Homepage();
-          }else{
-            return AuthPage();
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            return const Homepage();
+          } else {
+            return const AuthPage();
           }
         },
       ),
     );
   }
 }
-
-

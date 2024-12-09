@@ -32,7 +32,7 @@ dependencies:
   image_picker: ^1.1.2
   shared_preferences: ^2.0.13
   qr_flutter: ^4.1.0
-  share_plus: ^6.3.0 
+  #share_plus: ^6.3.4
   device_calendar: ^4.3.3
   timezone: ^0.9.4
   intl: ^0.17.0
