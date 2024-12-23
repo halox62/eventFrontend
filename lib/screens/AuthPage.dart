@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 
@@ -40,6 +39,10 @@ class _AuthPageState extends State<AuthPage> {
       await prefs.setString('userEmail', _email.text);
       await prefs.setString('jwtToken', token!);
     } on FirebaseAuthException catch (error) {
+      String message = "Wrong Credentials";
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
       print('Error: ${error.message}');
     }
   }
@@ -151,7 +154,7 @@ class _AuthPageState extends State<AuthPage> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              _profileImage != null
+              _profileImage != null && !isLogin
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(50.0),
                       child: Image.file(
@@ -161,16 +164,7 @@ class _AuthPageState extends State<AuthPage> {
                         fit: BoxFit.cover,
                       ),
                     )
-                  : Container(
-                      height: 120,
-                      width: 120,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.person,
-                          size: 60, color: Colors.black),
-                    ),
+                  : Container(),
               const SizedBox(height: 32),
               Stack(
                 children: [

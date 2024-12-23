@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -49,7 +50,12 @@ class _HomepageState extends State<Homepage> {
   double? eventLatitude;
   double? eventLongitude;
   bool hasError = false;
-  String host = "127.0.0.1:5000";
+  //String host = "127.0.0.1:5000";
+  String host = "10.0.2.2:5000";
+  final TextEditingController _searchController = TextEditingController();
+  late List<dynamic> profilesListSearch;
+  late List<dynamic> imagesListSearch;
+  late List<dynamic> emailsListSearch;
 
   bool isLoading = true;
 
@@ -59,14 +65,29 @@ class _HomepageState extends State<Homepage> {
     _initializeData();
   }
 
-  Future<void> _checkTokenValidity(String message) async {
-    message.toLowerCase();
-    if (message.contains("token")) {
-      signOut();
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const AuthPage()),
-      );
+  Future<void> _checkTokenValidity(int statusCode) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    if (statusCode == 401) {
+      try {
+        User? user = FirebaseAuth.instance.currentUser;
+
+        if (user != null) {
+          String? idToken = await user.getIdToken(true);
+          prefs.setString('jwtToken', idToken!);
+        } else {
+          await Auth().signOut();
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const AuthPage()),
+          );
+        }
+      } catch (e) {
+        await Auth().signOut();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const AuthPage()),
+        );
+      }
     }
   }
 
@@ -112,8 +133,7 @@ class _HomepageState extends State<Homepage> {
           eventLongitude = double.tryParse(data['longitude'].toString()) ?? 0.0;
         });
       } else {
-        var errorData = jsonDecode(response.body);
-        _checkTokenValidity(errorData['msg']);
+        _checkTokenValidity(response.statusCode);
         throw Exception('Failed to load event coordinates');
       }
     } catch (e) {
@@ -164,9 +184,7 @@ class _HomepageState extends State<Homepage> {
       var jsonResponse = jsonDecode(responseData);
       print('File URL: ${jsonResponse['file_url']}');
     } else {
-      final errorBody = await response.stream.bytesToString();
-      var errorData = jsonDecode(errorBody);
-      _checkTokenValidity(errorData['msg']);
+      _checkTokenValidity(response.statusCode);
       print('Upload failed');
     }
   }
@@ -190,8 +208,7 @@ class _HomepageState extends State<Homepage> {
           CodeEventList = jsonResponse['event_codes'];
           return CodeEventList;
         } else {
-          var errorData = jsonDecode(response.body);
-          _checkTokenValidity(errorData['msg']);
+          _checkTokenValidity(response.statusCode);
           print('Failed to load dates: ${response.statusCode}');
         }
       } catch (e) {
@@ -245,9 +262,7 @@ class _HomepageState extends State<Homepage> {
           if (response.statusCode == 200) {
             print('Foto caricata con successo');
           } else {
-            final errorBody = await response.stream.bytesToString();
-            var errorData = jsonDecode(errorBody);
-            _checkTokenValidity(errorData['msg']);
+            _checkTokenValidity(response.statusCode);
             print('Errore nel caricamento della foto');
           }
         }
@@ -361,12 +376,12 @@ class _HomepageState extends State<Homepage> {
       }
     }
 
-    if (index == 2) {
+    /*if (index == 2) {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const ProfilePage()),
       );
-    }
+    }*/
   }
 
   Future<void> fetchImages(String? email) async {
@@ -390,8 +405,7 @@ class _HomepageState extends State<Homepage> {
           images = List<String>.from(data['images']);
         });
       } else {
-        var errorData = jsonDecode(response.body);
-        _checkTokenValidity(errorData['msg']);
+        _checkTokenValidity(response.statusCode);
         print(response.body);
       }
     } catch (error) {
@@ -412,7 +426,6 @@ class _HomepageState extends State<Homepage> {
           'email': userEmail,
         }),
       );
-
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
@@ -425,8 +438,7 @@ class _HomepageState extends State<Homepage> {
           });
         }
       } else {
-        var errorData = jsonDecode(response.body);
-        _checkTokenValidity(errorData['msg']);
+        _checkTokenValidity(response.statusCode);
         throw Exception('Failed to load profile data');
       }
     } catch (error) {
@@ -449,21 +461,19 @@ class _HomepageState extends State<Homepage> {
       final response = await http.post(
         url,
         headers: headers,
-        body: json.encode({'image_url': photoUrl}), // Invia l'URL della foto
+        body: json.encode({'image_url': photoUrl}),
       );
 
       if (response.statusCode == 200) {
-        // Rimuovi la foto dalla lista locale
         setState(() {
-          images.remove(photoUrl); // Rimuovi usando l'URL della foto
+          images.remove(photoUrl);
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Foto eliminata con successo')),
         );
         return true;
       } else {
-        var errorData = jsonDecode(response.body);
-        _checkTokenValidity(errorData['msg']);
+        _checkTokenValidity(response.statusCode);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Text('Errore: impossibile eliminare la foto')),
@@ -479,16 +489,135 @@ class _HomepageState extends State<Homepage> {
     }
   }
 
+  Future<void> searchProfiles(String query) async {
+    String apiUrl = "http://" + host + "/search_profiles";
+
+    try {
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'profilo': query,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        profilesListSearch = data['profiles'];
+        imagesListSearch = data['images'];
+        emailsListSearch = data['emails'];
+        _showSearchResultsDialog(
+            emailsListSearch, profilesListSearch, imagesListSearch);
+      } else {
+        _checkTokenValidity(response.statusCode);
+        print("Errore API: ${response.statusCode}");
+        throw Exception("Errore durante la ricerca: ${response.body}");
+      }
+    } catch (e) {
+      print("Errore durante la chiamata API: $e");
+      throw Exception("Impossibile connettersi all'API.");
+    }
+  }
+
+  void _showSearchResultsDialog(List emails, List profiles, List images) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 50),
+          child: SizedBox(
+            width: double.infinity,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Titolo
+                const Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Text(
+                    'Risultati della ricerca',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                // Risultati
+                Expanded(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: profiles.length,
+                    itemBuilder: (context, index) {
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundImage: images.isNotEmpty
+                              ? NetworkImage(images[index])
+                              : null,
+                          child:
+                              images.isEmpty ? const Icon(Icons.person) : null,
+                        ),
+                        title: Text(profiles[index]),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  ProfilePage(email: emails[index]),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+                // Pulsante Chiudi
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      child: const Text('Chiudi'),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _searchProfiles() {
+    final searchText = _searchController.text;
+    searchProfiles(searchText);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const TextField(
-            decoration: InputDecoration(
-          hintText: 'Search...',
-          prefixIcon: Icon(Icons.search),
-          border: InputBorder.none,
-        )),
+        title: TextField(
+          controller: _searchController,
+          decoration: const InputDecoration(
+            hintText: 'Search...',
+            prefixIcon: Icon(Icons.search),
+            border: InputBorder.none,
+          ),
+          onSubmitted: (value) {
+            _searchProfiles();
+          },
+        ),
         leading: Builder(
           builder: (context) => IconButton(
             icon: const Icon(Icons.menu),
@@ -535,6 +664,13 @@ class _HomepageState extends State<Homepage> {
               title: const Text('Event'),
               onTap: () {
                 event();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.public_sharp),
+              title: const Text('Connect'),
+              onTap: () {
+                //event();/////////////////////////////////////////TO DO
               },
             ),
             ListTile(

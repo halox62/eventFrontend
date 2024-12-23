@@ -14,7 +14,8 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
   GoogleMapController? _controller;
   LatLng? selectedLocation;
   LatLng? currentLocation;
-  String host = "127.0.0.1:5000";
+  //String host = "127.0.0.1:5000";
+  String host = "10.0.2.2:5000";
 
   @override
   void initState() {

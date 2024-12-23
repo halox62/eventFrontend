@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:barcode_scan2/platform_wrapper.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -30,7 +31,9 @@ class Event extends State<EventCalendar> {
   List<DateTime> highlightedDates = [];
   List<DateTime> addEventDates = [];
   List<dynamic> eventJson = [];
-  String host = "127.0.0.1:5000";
+  //String host = "127.0.0.1:5000";
+  String host = "10.0.2.2:5000";
+  String eventName = "";
 
   @override
   void initState() {
@@ -39,14 +42,29 @@ class Event extends State<EventCalendar> {
     _initializeEventSubscribe();
   }
 
-  Future<void> _checkTokenValidity(String message) async {
-    message.toLowerCase();
-    if (message.contains("token")) {
-      await Auth().signOut();
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const AuthPage()),
-      );
+  Future<void> _checkTokenValidity(int statusCode) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    if (statusCode == 401) {
+      try {
+        User? user = FirebaseAuth.instance.currentUser;
+
+        if (user != null) {
+          String? idToken = await user.getIdToken(true);
+          prefs.setString('jwtToken', idToken!);
+        } else {
+          await Auth().signOut();
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const AuthPage()),
+          );
+        }
+      } catch (e) {
+        await Auth().signOut();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const AuthPage()),
+        );
+      }
     }
   }
 
@@ -164,6 +182,8 @@ class Event extends State<EventCalendar> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Text('Name: ${event['eventName'] ?? 'N/A'}'),
+                        const SizedBox(height: 4),
                         Text('Code: ${event['eventCode'] ?? 'N/A'}'),
                         const SizedBox(height: 4),
                         Text('Data: ${event['eventDate'] ?? 'N/A'}'),
@@ -446,7 +466,6 @@ class Event extends State<EventCalendar> {
 
       // Controlla se la risposta è andata a buon fine
       if (response.statusCode == 200) {
-        print('ok');
       } else {
         var errorData = jsonDecode(response.body);
         _checkTokenValidity(errorData['msg']);
@@ -473,6 +492,18 @@ class Event extends State<EventCalendar> {
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  TextField(
+                    onChanged: (value) {
+                      setState(() {
+                        eventName = value;
+                      });
+                    },
+                    decoration: const InputDecoration(
+                      labelText: 'Nome Evento',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
                   const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: () async {
@@ -569,8 +600,8 @@ class Event extends State<EventCalendar> {
                       ? null
                       : () {
                           Navigator.of(context).pop();
-                          _showQRCode(
-                              context, selectedDate!, selectedTime!, location!);
+                          _showQRCode(eventName, selectedDate!, selectedTime!,
+                              location!);
                         },
                 ),
               ],
@@ -592,8 +623,8 @@ class Event extends State<EventCalendar> {
   }
 
 // Funzione per creare l'evento
-  Future<String> createEvent(String email, String code, DateTime selectedDate,
-      TimeOfDay timeOfDay, LatLng location) async {
+  Future<String> createEvent(String email, String eventName, String code,
+      DateTime selectedDate, TimeOfDay timeOfDay, LatLng location) async {
     try {
       final headers = {
         'Content-Type': 'application/json',
@@ -638,7 +669,7 @@ class Event extends State<EventCalendar> {
       String formattedEndDate = DateFormat('yyyy-MM-dd').format(endDateTime);
       String formattedEndTime =
           '${endDateTime.hour.toString().padLeft(2, '0')}:${endDateTime.minute.toString().padLeft(2, '0')}';
-
+      request.fields['eventName'] = eventName;
       request.fields['eventDate'] = formattedDate;
       request.fields['endDate'] = formattedEndDate;
       request.fields['endTime'] = formattedEndTime;
@@ -666,11 +697,11 @@ class Event extends State<EventCalendar> {
     }
   }
 
-  void _showQRCode(BuildContext context, DateTime selectedDate,
-      TimeOfDay timeOfDay, LatLng location) async {
+  void _showQRCode(String eventName, DateTime selectedDate, TimeOfDay timeOfDay,
+      LatLng location) async {
     String data = _generateRandomString(8);
-    String res =
-        await createEvent(userEmail!, data, selectedDate, timeOfDay, location);
+    String res = await createEvent(
+        userEmail!, eventName, data, selectedDate, timeOfDay, location);
     if (res == "ok") {
       showDialog(
         context: context,
@@ -711,6 +742,11 @@ class Event extends State<EventCalendar> {
           );
         },
       );
-    }
+    } /* else {
+      String message = "Event not create";
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }*/
   }
 }

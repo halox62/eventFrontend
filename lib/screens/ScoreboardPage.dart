@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,7 +19,8 @@ class _ScoreboardPageState extends State<ScoreboardPage> {
   String? userEmail;
   bool _isLoading = true;
   bool _hasError = false;
-  String host = "127.0.0.1:5000";
+  //String host = "127.0.0.1:5000";
+  String host = "10.0.2.2:5000";
   String? token;
   /*List<dynamic> _userRanking = [];
   bool _isLoadingTop100 = true;
@@ -33,14 +35,29 @@ class _ScoreboardPageState extends State<ScoreboardPage> {
     //_fetchUserRanking();
   }
 
-  Future<void> _checkTokenValidity(String message) async {
-    message.toLowerCase();
-    if (message.contains("token")) {
-      await Auth().signOut();
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const AuthPage()),
-      );
+  Future<void> _checkTokenValidity(int statusCode) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    if (statusCode == 401) {
+      try {
+        User? user = FirebaseAuth.instance.currentUser;
+
+        if (user != null) {
+          String? idToken = await user.getIdToken(true);
+          prefs.setString('jwtToken', idToken!);
+        } else {
+          await Auth().signOut();
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const AuthPage()),
+          );
+        }
+      } catch (e) {
+        await Auth().signOut();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const AuthPage()),
+        );
+      }
     }
   }
 
