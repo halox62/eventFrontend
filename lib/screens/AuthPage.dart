@@ -36,7 +36,6 @@ class _AuthPageState extends State<AuthPage> {
       String? token = await user?.getIdToken();
 
       SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setString('userEmail', _email.text);
       await prefs.setString('jwtToken', token!);
     } on FirebaseAuthException catch (error) {
       String message = "Wrong Credentials";

@@ -40,6 +40,7 @@ class _ProfilePageState extends State<ProfilePage> {
         if (user != null) {
           String? idToken = await user.getIdToken(true);
           prefs.setString('jwtToken', idToken!);
+          initState();
         } else {
           await Auth().signOut();
           Navigator.pushReplacement(
@@ -122,8 +123,6 @@ class _ProfilePageState extends State<ProfilePage> {
         });
       } else {
         _checkTokenValidity(response.statusCode);
-        print('Errore: ${response.statusCode}');
-        print(response.body);
       }
     } catch (error) {
       print('Errore durante la richiesta: $error');

@@ -38,8 +38,16 @@ class Event extends State<EventCalendar> {
   @override
   void initState() {
     super.initState();
-    _initializeEventCreate();
-    _initializeEventSubscribe();
+    _initializePageEvent();
+  }
+
+  Future<void> _initializePageEvent() async {
+    try {
+      await _initializeEventCreate();
+      await _initializeEventSubscribe();
+    } catch (e) {
+      print('Error: $e');
+    }
   }
 
   Future<void> _checkTokenValidity(int statusCode) async {
@@ -51,6 +59,7 @@ class Event extends State<EventCalendar> {
         if (user != null) {
           String? idToken = await user.getIdToken(true);
           prefs.setString('jwtToken', idToken!);
+          initState();
         } else {
           await Auth().signOut();
           Navigator.pushReplacement(
@@ -70,18 +79,16 @@ class Event extends State<EventCalendar> {
 
   Future<void> _initializeEventCreate() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    userEmail = prefs.getString('userEmail');
     token = prefs.getString('jwtToken');
 
-    if (userEmail != null) {
+    if (token != null) {
       try {
         final headers = {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         };
         final response = await http.get(
-            Uri.parse(
-                'http://' + host + '/createGetEventDates?email=$userEmail'),
+            Uri.parse('http://' + host + '/createGetEventDates'),
             headers: headers);
 
         if (response.statusCode == 200) {
@@ -92,7 +99,6 @@ class Event extends State<EventCalendar> {
         } else {
           var errorData = jsonDecode(response.body);
           _checkTokenValidity(errorData['msg']);
-          print('Failed to load dates: ${response.statusCode}');
         }
       } catch (e) {
         print('Error: $e');
@@ -101,33 +107,25 @@ class Event extends State<EventCalendar> {
   }
 
   Future<void> _initializeEventSubscribe() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    userEmail = prefs.getString('userEmail');
+    try {
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+      final response = await http.get(
+          Uri.parse('http://' + host + '/subscribeGetEventDates'),
+          headers: headers);
 
-    if (userEmail != null) {
-      try {
-        final headers = {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        };
-        final response = await http.get(
-            Uri.parse(
-                'http://' + host + '/subscribeGetEventDates?email=$userEmail'),
-            headers: headers);
-
-        if (response.statusCode == 200) {
-          List<dynamic> jsonResponse = json.decode(response.body);
-          addEventDates =
-              jsonResponse.map((date) => DateTime.parse(date)).toList();
-          setState(() {});
-        } else {
-          var errorData = jsonDecode(response.body);
-          _checkTokenValidity(errorData['msg']);
-          print('Failed to load dates: ${response.statusCode}');
-        }
-      } catch (e) {
-        print('Error: $e');
+      if (response.statusCode == 200) {
+        List<dynamic> jsonResponse = json.decode(response.body);
+        addEventDates =
+            jsonResponse.map((date) => DateTime.parse(date)).toList();
+        setState(() {});
+      } else {
+        _checkTokenValidity(response.statusCode);
       }
+    } catch (e) {
+      print('Error: $e');
     }
   }
 
@@ -137,10 +135,7 @@ class Event extends State<EventCalendar> {
 
     final url = Uri.parse('http://' + host + '/events_by_date');
 
-    final body = jsonEncode({
-      'date': dateOnly,
-      'email': userEmail,
-    });
+    final body = jsonEncode({'date': dateOnly});
 
     final headers = {
       'Content-Type': 'application/json',
@@ -157,8 +152,7 @@ class Event extends State<EventCalendar> {
       eventJson = jsonDecode(response.body)['events'];
       return eventJson;
     } else {
-      var errorData = jsonDecode(response.body);
-      _checkTokenValidity(errorData['msg']);
+      _checkTokenValidity(response.statusCode);
       throw Exception('Failed to load events');
     }
   }
@@ -461,15 +455,13 @@ class Event extends State<EventCalendar> {
       final response = await http.post(
         url,
         headers: headers,
-        body: jsonEncode({'email': userEmail, 'code': code}),
+        body: jsonEncode({'code': code}),
       );
 
-      // Controlla se la risposta è andata a buon fine
       if (response.statusCode == 200) {
+        initState();
       } else {
-        var errorData = jsonDecode(response.body);
-        _checkTokenValidity(errorData['msg']);
-        print('Errore: ${response.statusCode}');
+        _checkTokenValidity(response.statusCode);
       }
     } catch (error) {
       print('Errore durante la richiesta: $error');
@@ -623,7 +615,7 @@ class Event extends State<EventCalendar> {
   }
 
 // Funzione per creare l'evento
-  Future<String> createEvent(String email, String eventName, String code,
+  Future<String> createEvent(String eventName, String code,
       DateTime selectedDate, TimeOfDay timeOfDay, LatLng location) async {
     try {
       final headers = {
@@ -638,7 +630,6 @@ class Event extends State<EventCalendar> {
 
       request.headers.addAll(headers);
 
-      request.fields['email'] = email;
       request.fields['eventCode'] = code;
 
       DateTime today = DateTime.now();
@@ -680,15 +671,9 @@ class Event extends State<EventCalendar> {
       var response = await request.send();
 
       if (response.statusCode == 201) {
-        var responseData = await response.stream.bytesToString();
-        print('Success: $responseData');
         return "ok";
       } else {
-        final errorBody = await response.stream.bytesToString();
-        var errorData = jsonDecode(errorBody);
-        _checkTokenValidity(errorData['msg']);
-        print(
-            'Failed: ${response.statusCode}, Response: ${await response.stream.bytesToString()}');
+        _checkTokenValidity(response.statusCode);
         return "NO";
       }
     } catch (error) {
@@ -700,8 +685,8 @@ class Event extends State<EventCalendar> {
   void _showQRCode(String eventName, DateTime selectedDate, TimeOfDay timeOfDay,
       LatLng location) async {
     String data = _generateRandomString(8);
-    String res = await createEvent(
-        userEmail!, eventName, data, selectedDate, timeOfDay, location);
+    String res =
+        await createEvent(eventName, data, selectedDate, timeOfDay, location);
     if (res == "ok") {
       showDialog(
         context: context,
@@ -736,6 +721,7 @@ class Event extends State<EventCalendar> {
                 child: const Text('Chiudi'),
                 onPressed: () {
                   Navigator.of(context).pop();
+                  initState();
                 },
               ),
             ],

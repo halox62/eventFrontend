@@ -74,6 +74,7 @@ class _HomepageState extends State<Homepage> {
         if (user != null) {
           String? idToken = await user.getIdToken(true);
           prefs.setString('jwtToken', idToken!);
+          initState();
         } else {
           await Auth().signOut();
           Navigator.pushReplacement(
@@ -93,12 +94,11 @@ class _HomepageState extends State<Homepage> {
 
   Future<void> _initializeData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    userEmail = prefs.getString('userEmail');
     token = prefs.getString('jwtToken');
 
-    if (userEmail != null) {
-      await fetchProfileData(userEmail);
-      await fetchImages(userEmail);
+    if (token != null) {
+      await fetchProfileData();
+      await fetchImages();
     } else {
       setState(() {
         isLoading = false;
@@ -169,10 +169,6 @@ class _HomepageState extends State<Homepage> {
       'Authorization': 'Bearer $token',
     };
 
-    if (userEmail != null) {
-      request.fields['email'] = userEmail!;
-    }
-
     request.files
         .add(await http.MultipartFile.fromPath('file', imageFile.path));
     request.headers.addAll(headers);
@@ -180,9 +176,7 @@ class _HomepageState extends State<Homepage> {
     var response = await request.send();
 
     if (response.statusCode == 200) {
-      var responseData = await response.stream.bytesToString();
-      var jsonResponse = jsonDecode(responseData);
-      print('File URL: ${jsonResponse['file_url']}');
+      //initState();
     } else {
       _checkTokenValidity(response.statusCode);
       print('Upload failed');
@@ -190,30 +184,24 @@ class _HomepageState extends State<Homepage> {
   }
 
   Future<List<dynamic>?> checkUserEvents() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    userEmail = prefs.getString('userEmail');
     final headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
     };
+    try {
+      final response = await http
+          .get(Uri.parse('http://' + host + '/getEventCode'), headers: headers);
 
-    if (userEmail != null) {
-      try {
-        final response = await http.get(
-            Uri.parse('http://' + host + '/getEventCode?email=$userEmail'),
-            headers: headers);
-
-        if (response.statusCode == 200) {
-          Map<String, dynamic> jsonResponse = json.decode(response.body);
-          CodeEventList = jsonResponse['event_codes'];
-          return CodeEventList;
-        } else {
-          _checkTokenValidity(response.statusCode);
-          print('Failed to load dates: ${response.statusCode}');
-        }
-      } catch (e) {
-        print('Error: $e');
+      if (response.statusCode == 200) {
+        Map<String, dynamic> jsonResponse = json.decode(response.body);
+        CodeEventList = jsonResponse['event_codes'];
+        return CodeEventList;
+      } else {
+        _checkTokenValidity(response.statusCode);
+        print('Failed to load dates: ${response.statusCode}');
       }
+    } catch (e) {
+      print('Error: $e');
     }
     return null;
   }
@@ -251,7 +239,6 @@ class _HomepageState extends State<Homepage> {
           request.headers.addAll(headers);
 
           request.fields['eventCode'] = eventCode;
-          request.fields['email'] = userEmail!;
           request.files.add(await http.MultipartFile.fromPath(
             'image',
             _capturedImage!.path,
@@ -260,10 +247,9 @@ class _HomepageState extends State<Homepage> {
           var response = await request.send();
 
           if (response.statusCode == 200) {
-            print('Foto caricata con successo');
+            //initState();
           } else {
             _checkTokenValidity(response.statusCode);
-            print('Errore nel caricamento della foto');
           }
         }
       } else {
@@ -274,15 +260,13 @@ class _HomepageState extends State<Homepage> {
         SnackBar(content: Text(message)),
       );
     } else if (permission.isDenied) {
-      print("Permesso negato. Non è possibile accedere alla posizione.");
-      // Potresti mostrare un messaggio all'utente per spiegare che è necessario il permesso
     } else if (permission.isPermanentlyDenied) {
-      // Il permesso è stato negato in modo permanente, apri le impostazioni dell'app
       openAppSettings();
     }
   }
 
   void showEventsDialog(List<dynamic> events) {
+    print("helloooooo");
     final rootContext = context;
     showDialog(
       context: context,
@@ -384,7 +368,7 @@ class _HomepageState extends State<Homepage> {
     }*/
   }
 
-  Future<void> fetchImages(String? email) async {
+  Future<void> fetchImages() async {
     final headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
@@ -392,11 +376,7 @@ class _HomepageState extends State<Homepage> {
     final url = Uri.parse('http://' + host + '/getImage');
 
     try {
-      final response = await http.post(
-        url,
-        headers: headers,
-        body: jsonEncode({'email': email}),
-      );
+      final response = await http.post(url, headers: headers);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -406,26 +386,20 @@ class _HomepageState extends State<Homepage> {
         });
       } else {
         _checkTokenValidity(response.statusCode);
-        print(response.body);
       }
     } catch (error) {
       print('Errore durante la richiesta: $error');
     }
   }
 
-  Future<void> fetchProfileData(String? userEmail) async {
+  Future<void> fetchProfileData() async {
     try {
       final headers = {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       };
-      final response = await http.post(
-        Uri.parse('http://' + host + '/profile'),
-        headers: headers,
-        body: jsonEncode({
-          'email': userEmail,
-        }),
-      );
+      final response = await http.post(Uri.parse('http://' + host + '/profile'),
+          headers: headers);
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
@@ -471,6 +445,7 @@ class _HomepageState extends State<Homepage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Foto eliminata con successo')),
         );
+        initState();
         return true;
       } else {
         _checkTokenValidity(response.statusCode);
@@ -762,12 +737,43 @@ class _HomepageState extends State<Homepage> {
                               right: 8,
                               child: GestureDetector(
                                 onTap: () async {
-                                  bool isDeleted =
-                                      await _deletePhoto(images[index]);
-                                  if (isDeleted) {
-                                    setState(() {
-                                      images.removeAt(index);
-                                    });
+                                  // Mostra il messaggio di conferma
+                                  bool? confirm = await showDialog(
+                                    context: context,
+                                    builder: (BuildContext context) {
+                                      return AlertDialog(
+                                        title: Text("Conferma eliminazione"),
+                                        content: Text(
+                                            "Sei sicuro di voler eliminare questa foto?"),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () {
+                                              Navigator.of(context)
+                                                  .pop(false); // Ritorna false
+                                            },
+                                            child: Text("Annulla"),
+                                          ),
+                                          TextButton(
+                                            onPressed: () {
+                                              Navigator.of(context)
+                                                  .pop(true); // Ritorna true
+                                            },
+                                            child: Text("Elimina"),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  );
+
+                                  // Se l'utente conferma l'eliminazione
+                                  if (confirm == true) {
+                                    bool isDeleted =
+                                        await _deletePhoto(images[index]);
+                                    if (isDeleted) {
+                                      setState(() {
+                                        images.removeAt(index);
+                                      });
+                                    }
                                   }
                                 },
                                 child: Container(

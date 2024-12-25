@@ -7,6 +7,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:social_flutter_giorgio/auth.dart';
 import 'package:social_flutter_giorgio/screens/AuthPage.dart';
+import 'package:social_flutter_giorgio/screens/HomePage.dart';
 
 class EventPageControl extends StatefulWidget {
   final String eventCode;
@@ -52,6 +53,7 @@ class EventPage extends State<EventPageControl> {
         if (user != null) {
           String? idToken = await user.getIdToken(true);
           prefs.setString('jwtToken', idToken!);
+          initState();
         } else {
           await Auth().signOut();
           Navigator.pushReplacement(
@@ -71,7 +73,6 @@ class EventPage extends State<EventPageControl> {
 
   Future<void> _name() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    userEmail = prefs.getString('userEmail');
     token = prefs.getString('jwtToken');
     final headers = {
       'Content-Type': 'application/json',
@@ -125,8 +126,7 @@ class EventPage extends State<EventPageControl> {
           eventLongitude = double.tryParse(data['longitude'].toString()) ?? 0.0;
         });
       } else {
-        var errorData = jsonDecode(response.body);
-        _checkTokenValidity(errorData['msg']);
+        _checkTokenValidity(response.statusCode);
         throw Exception('Failed to load event coordinates');
       }
     } catch (e) {
@@ -134,14 +134,13 @@ class EventPage extends State<EventPageControl> {
     }
   }
 
-  Future<void> setPositionTrue(String email, String eventCode) async {
+  Future<String> setPositionTrue(String eventCode) async {
     final url = Uri.parse('http://' + host + '/set_position_true');
     final headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
     };
     final body = jsonEncode({
-      'email': email,
       'eventCode': eventCode,
     });
 
@@ -152,18 +151,16 @@ class EventPage extends State<EventPageControl> {
     );
 
     if (response.statusCode == 200) {
-      print('Position set to true');
+      return 'Posizione ok';
     } else {
-      var errorData = jsonDecode(response.body);
-      _checkTokenValidity(errorData['msg']);
-      print('Failed to set position: ${response.body}');
+      _checkTokenValidity(response.statusCode);
+      return 'Errore nella verifica della posizionecl';
     }
   }
 
   Future<void> _checkUserProximity() async {
     String message;
     if (eventLatitude == null || eventLongitude == null) {
-      print("Coordinate dell'evento non disponibili");
       return;
     }
     try {
@@ -185,8 +182,7 @@ class EventPage extends State<EventPageControl> {
 
         // Controlla se la distanza è entro 1 km
         if (distance <= 1000) {
-          message = 'Posizione ok';
-          setPositionTrue(userEmail!, widget.eventCode);
+          message = await setPositionTrue(widget.eventCode);
         } else {
           message = 'Sei troppo lontano dall\'evento';
         }
@@ -196,8 +192,10 @@ class EventPage extends State<EventPageControl> {
         );
       } else if (permission.isDenied) {
         // Il permesso è stato negato
-        print("Permesso negato. Non è possibile accedere alla posizione.");
-        // Potresti mostrare un messaggio all'utente per spiegare che è necessario il permesso
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const Homepage()),
+        );
       } else if (permission.isPermanentlyDenied) {
         // Il permesso è stato negato in modo permanente, apri le impostazioni dell'app
         openAppSettings();
@@ -213,14 +211,10 @@ class EventPage extends State<EventPageControl> {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
     };
-    final body = jsonEncode({
-      'email': userEmail,
-    });
 
-    final response = await http.post(
+    final response = await http.get(
       url,
       headers: headers,
-      body: body,
     );
 
     if (response.statusCode == 200) {
@@ -278,7 +272,6 @@ class EventPage extends State<EventPageControl> {
     final url = Uri.parse('http://' + host + '/photoByCode');
 
     final body = jsonEncode({
-      'email': userEmail,
       'code': widget.eventCode,
     });
 
@@ -313,10 +306,7 @@ class EventPage extends State<EventPageControl> {
       'Authorization': 'Bearer $token',
     };
     final url = Uri.parse('http://' + host + '/increment_like');
-    final body = jsonEncode({
-      'photoId': photoId,
-      'email': userEmail,
-    });
+    final body = jsonEncode({'photoId': photoId});
 
     final response = await http.post(
       url,

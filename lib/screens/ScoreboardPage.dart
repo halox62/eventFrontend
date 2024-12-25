@@ -44,6 +44,7 @@ class _ScoreboardPageState extends State<ScoreboardPage> {
         if (user != null) {
           String? idToken = await user.getIdToken(true);
           prefs.setString('jwtToken', idToken!);
+          initState();
         } else {
           await Auth().signOut();
           Navigator.pushReplacement(
@@ -81,8 +82,7 @@ class _ScoreboardPageState extends State<ScoreboardPage> {
           _isLoading = false;
         });
       } else {
-        var errorData = jsonDecode(response.body);
-        _checkTokenValidity(errorData['msg']);
+        _checkTokenValidity(response.statusCode);
         setState(() {
           _hasError = true;
           _isLoading = false;
