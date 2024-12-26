@@ -302,6 +302,36 @@ class _HomepageState extends State<Homepage> {
     );
   }
 
+  void _showUploadSuccess(BuildContext context, bool withEvent) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        width: 300,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        content: Row(
+          children: [
+            const Icon(
+              Icons.check_circle_outline,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              withEvent
+                  ? 'Foto caricata nell\'evento'
+                  : 'Foto caricata con successo',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void onTabTapped() async {
     var index = 1;
     if (index == 1) {
@@ -318,44 +348,98 @@ class _HomepageState extends State<Homepage> {
           showDialog(
             context: context,
             builder: (BuildContext context) {
-              return AlertDialog(
-                title: const Text('Caricare foto in un evento?'),
-                content:
-                    const Text('Sei iscritto a eventi. Vuoi caricare la foto?'),
-                actions: <Widget>[
-                  TextButton(
-                    child: const Text('No'),
-                    onPressed: () async {
-                      await uploadImage(_capturedImage!);
-                      Navigator.of(context)
-                          .pop(); // Chiudi popup senza fare nulla
-                    },
+              return Dialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.9,
+                    maxHeight: MediaQuery.of(context).size.height * 0.8,
                   ),
-                  TextButton(
-                    child: const Text('Sì'),
-                    onPressed: () async {
-                      Navigator.of(context).pop();
-                      showEventsDialog(isEnrolledInEvents);
-
-                      // Mostra conferma di caricamento
-                      //ScaffoldMessenger.of(context).showSnackBar(
-                      //SnackBar(
-                      //   content: Text(
-                      //     'Foto caricata con successo negli eventi!')),
-                      //  );
-                    },
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Carica foto',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Sei iscritto a degli eventi. Vuoi caricare la foto in uno di essi?',
+                            style: TextStyle(
+                              fontSize: 16,
+                              height: 1.5,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          // Preview dell'immagine con dimensioni esplicite
+                          AspectRatio(
+                            aspectRatio: 16 / 9,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.file(
+                                image,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          // Bottoni
+                          FilledButton(
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size.fromHeight(48),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onPressed: () async {
+                              Navigator.of(context).pop();
+                              showEventsDialog(isEnrolledInEvents);
+                            },
+                            child: const Text(
+                              'Scegli evento',
+                              style: TextStyle(fontSize: 16),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(48),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onPressed: () async {
+                              await uploadImage(image);
+                              Navigator.of(context).pop();
+                              _showUploadSuccess(context, false);
+                            },
+                            child: const Text(
+                              'Carica senza evento',
+                              style: TextStyle(fontSize: 16),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ],
+                ),
               );
             },
           );
         } else {
-          // Se non sei iscritto ad eventi, carica direttamente la foto o mostra un messaggio
-          await uploadImage(_capturedImage!);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('Foto caricata senza evento associato')),
-          );
+          await uploadImage(image);
+          _showUploadSuccess(context, false);
         }
       }
     }
@@ -580,256 +664,365 @@ class _HomepageState extends State<Homepage> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
+      backgroundColor: colorScheme.background,
+      // Modern AppBar con search integrato
       appBar: AppBar(
-        title: TextField(
-          controller: _searchController,
-          decoration: const InputDecoration(
-            hintText: 'Search...',
-            prefixIcon: Icon(Icons.search),
-            border: InputBorder.none,
+        elevation: 0,
+        backgroundColor: colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
+        title: Container(
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceVariant.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(12),
           ),
-          onSubmitted: (value) {
-            _searchProfiles();
-          },
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Cerca...',
+              hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
+              prefixIcon: Icon(Icons.search, color: colorScheme.primary),
+              border: InputBorder.none,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+          ),
         ),
         leading: Builder(
           builder: (context) => IconButton(
-            icon: const Icon(Icons.menu),
+            icon: Icon(Icons.menu, color: colorScheme.onSurface),
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
       ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: <Widget>[
-            const DrawerHeader(
-              decoration: BoxDecoration(
-                color: Colors.blue,
-              ),
-              child: Text(
-                'Menu',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
+
+      // Drawer moderno
+      drawer: NavigationDrawer(
+        backgroundColor: colorScheme.surface,
+        children: [
+          DrawerHeader(
+            decoration: BoxDecoration(
+              color: colorScheme.primaryContainer,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text(
+                  'Menu',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: colorScheme.onPrimaryContainer,
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
-              ),
+                const SizedBox(height: 8),
+              ],
             ),
-            ListTile(
-              leading: const Icon(Icons.home),
-              title: const Text('Home'),
-              onTap: () {
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.score_outlined),
-              title: const Text('Scoreboard'),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const ScoreboardPage()),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.event),
-              title: const Text('Event'),
-              onTap: () {
-                event();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.public_sharp),
-              title: const Text('Connect'),
-              onTap: () {
-                //event();/////////////////////////////////////////TO DO
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.logout),
-              title: const Text('Logout'),
-              onTap: () {
+          ),
+          ListTile(
+            leading: const Icon(Icons.home_outlined),
+            title: const Text('Home'),
+            onTap: () {
+              Navigator.pop(context); // Chiude il drawer
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.score_outlined),
+            title: const Text('Scoreboard'),
+            onTap: () {
+              Navigator.pop(context); // Chiude il drawer
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ScoreboardPage()),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.event_outlined),
+            title: const Text('Event'),
+            onTap: () {
+              Navigator.pop(context); // Chiude il drawer
+              event();
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.public_outlined),
+            title: const Text('Connect'),
+            onTap: () {
+              Navigator.pop(context); // Chiude il drawer
+              // TODO: Implementa la navigazione per Connect
+            },
+          ),
+          const Divider(),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: FilledButton.tonalIcon(
+              onPressed: () {
+                Navigator.pop(context); // Chiude il drawer
                 signOut();
               },
+              icon: const Icon(Icons.logout),
+              label: const Text('Logout'),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+
+      // Body con profile e grid
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
                 children: [
+                  // Profile section
                   Row(
                     children: [
-                      CircleAvatar(
-                        radius: 40,
-                        backgroundImage: profileImageUrl != null
-                            ? NetworkImage(profileImageUrl!)
-                            : null,
-                        child: profileImageUrl == null
-                            ? const Icon(Icons.person, size: 40)
-                            : null,
-                      ),
-                      const SizedBox(width: 16),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            userName ?? 'Unknown User',
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
+                      Hero(
+                        tag: 'profile-image',
+                        child: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: colorScheme.shadow.withOpacity(0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
-                        ],
+                          child: CircleAvatar(
+                            radius: 40,
+                            backgroundColor: colorScheme.surfaceVariant,
+                            backgroundImage: profileImageUrl != null
+                                ? NetworkImage(profileImageUrl!)
+                                : null,
+                            child: profileImageUrl == null
+                                ? Icon(Icons.person,
+                                    size: 40,
+                                    color: colorScheme.onSurfaceVariant)
+                                : null,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              userName ?? 'Unknown User',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: colorScheme.primaryContainer,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                '${point ?? '0'} points',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelLarge
+                                    ?.copyWith(
+                                      color: colorScheme.onPrimaryContainer,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
-                  ),
-                  const Spacer(),
-                  Text(
-                    point ?? 'Unknown Point',
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
                   ),
                 ],
               ),
             ),
-            Expanded(
-              child: images.isNotEmpty
-                  ? GridView.builder(
-                      padding: const EdgeInsets.all(10),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 8,
-                        mainAxisSpacing: 8,
-                      ),
-                      itemCount: images.length,
-                      itemBuilder: (context, index) {
-                        return Stack(
-                          children: [
-                            // Immagine
-                            Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              clipBehavior: Clip.antiAlias,
-                              child: Image.network(
-                                images[index],
-                                fit: BoxFit.cover,
-                                width: double.infinity,
-                                height: double.infinity,
-                              ),
-                            ),
-                            // Pulsante di eliminazione
-                            Positioned(
-                              top: 8,
-                              right: 8,
-                              child: GestureDetector(
-                                onTap: () async {
-                                  // Mostra il messaggio di conferma
-                                  bool? confirm = await showDialog(
-                                    context: context,
-                                    builder: (BuildContext context) {
-                                      return AlertDialog(
-                                        title: Text("Conferma eliminazione"),
-                                        content: Text(
-                                            "Sei sicuro di voler eliminare questa foto?"),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () {
-                                              Navigator.of(context)
-                                                  .pop(false); // Ritorna false
-                                            },
-                                            child: Text("Annulla"),
-                                          ),
-                                          TextButton(
-                                            onPressed: () {
-                                              Navigator.of(context)
-                                                  .pop(true); // Ritorna true
-                                            },
-                                            child: Text("Elimina"),
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  );
+          ),
 
-                                  // Se l'utente conferma l'eliminazione
-                                  if (confirm == true) {
-                                    bool isDeleted =
-                                        await _deletePhoto(images[index]);
-                                    if (isDeleted) {
-                                      setState(() {
-                                        images.removeAt(index);
-                                      });
-                                    }
-                                  }
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withOpacity(0.5),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.delete,
-                                    color: Colors.white,
-                                    size: 18,
+          // Grid di immagini
+          images.isNotEmpty
+              ? SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverGrid(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 1,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: colorScheme.surfaceVariant,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Image.network(
+                                  images[index],
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              // Overlay scuro per il pulsante elimina
+                              Positioned(
+                                top: 8,
+                                right: 8,
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(20),
+                                    onTap: () =>
+                                        _showDeleteDialog(context, index),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withOpacity(0.5),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: const Icon(
+                                        Icons.delete_outline,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         );
                       },
-                    )
-                  : const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.photo_library_outlined,
-                            size: 80,
-                            color: Colors.grey,
-                          ),
-                          SizedBox(height: 16),
-                          Text(
-                            'Nessuna foto disponibile',
-                            style: TextStyle(fontSize: 18, color: Colors.grey),
-                          ),
-                        ],
-                      ),
+                      childCount: images.length,
                     ),
-            )
-          ],
-        ),
+                  ),
+                )
+              : SliverFillRemaining(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.photo_library_outlined,
+                          size: 64,
+                          color: colorScheme.onSurfaceVariant.withOpacity(0.5),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Nessuna foto disponibile',
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Inizia a catturare un outfit accattivante, scala le classifiche',
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: colorScheme.onSurfaceVariant
+                                        .withOpacity(0.7),
+                                  ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+        ],
       ),
-      floatingActionButton: SizedBox(
-        width: 100.0,
-        height: 60.0,
-        child: FloatingActionButton(
-          onPressed: onTabTapped,
-          child: const Icon(Icons.add_a_photo),
-          backgroundColor: Colors.amber[800],
-        ),
+
+      // FAB e bottom bar moderni
+      floatingActionButton: FloatingActionButton(
+        onPressed: onTabTapped,
+        elevation: 4,
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
+        child: const Icon(Icons.add_a_photo),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
+        height: 60,
+        elevation: 0,
+        color: colorScheme.surface,
         shape: const CircularNotchedRectangle(),
-        notchMargin: 6.0,
-        child: Container(height: 60.0),
+        notchMargin: 8,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            const SizedBox(width: 48),
+            const SizedBox(width: 48),
+          ],
+        ),
       ),
+    );
+  }
+
+  Future<void> _showDeleteDialog(BuildContext context, int index) async {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: colorScheme.surface,
+          surfaceTintColor: Colors.transparent,
+          title: Text(
+            'Conferma eliminazione',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          content: Text(
+            'Sei sicuro di voler eliminare questa foto?',
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Annulla',
+                style: TextStyle(color: colorScheme.primary),
+              ),
+            ),
+            FilledButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                if (await _deletePhoto(images[index])) {
+                  // Mostra snackbar di conferma
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Foto eliminata con successo'),
+                      backgroundColor: colorScheme.primaryContainer,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: colorScheme.errorContainer,
+                foregroundColor: colorScheme.onErrorContainer,
+              ),
+              child: const Text('Elimina'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

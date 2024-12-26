@@ -164,93 +164,212 @@ class Event extends State<EventCalendar> {
       showDialog(
         context: context,
         builder: (context) {
-          return AlertDialog(
-            title: const Text('Dettagli degli Eventi'),
-            content: SingleChildScrollView(
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Container(
+              constraints: const BoxConstraints(
+                maxWidth: 500, // Limita la larghezza massima per desktop
+                maxHeight: 700, // Limita l'altezza massima
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: eventJson.map<Widget>((event) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header con titolo e pulsante di chiusura
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 16, 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Name: ${event['eventName'] ?? 'N/A'}'),
-                        const SizedBox(height: 4),
-                        Text('Code: ${event['eventCode'] ?? 'N/A'}'),
-                        const SizedBox(height: 4),
-                        Text('Data: ${event['eventDate'] ?? 'N/A'}'),
-                        const SizedBox(height: 4),
-                        Text('Data Fine: ${event['endDate'] ?? 'N/A'}'),
-                        const SizedBox(height: 4),
-                        Text('Ora Fine: ${event['endTime'] ?? 'N/A'}'),
-                        const SizedBox(height: 4),
-                        SizedBox(
-                          height: 200, // Altezza della mappa
-                          width: double.infinity, // Larghezza piena
-                          child: GoogleMap(
-                            initialCameraPosition: CameraPosition(
-                              target: LatLng(
-                                double.tryParse(
-                                        event['latitudine'].toString()) ??
-                                    0.0,
-                                double.tryParse(
-                                        event['longitude'].toString()) ??
-                                    0.0,
+                        Text(
+                          'Dettagli Eventi',
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineSmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.w600,
                               ),
-                              zoom: 14.0,
-                            ),
-                            markers: {
-                              Marker(
-                                markerId: const MarkerId('event_location'),
-                                position: LatLng(
-                                  double.tryParse(
-                                          event['latitudine'].toString()) ??
-                                      0.0,
-                                  double.tryParse(
-                                          event['longitude'].toString()) ??
-                                      0.0,
-                                ),
-                                infoWindow: const InfoWindow(
-                                  title: 'Posizione Evento',
-                                ),
-                              ),
-                            },
-                          ),
                         ),
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => EventPageControl(
-                                  eventCode: event['eventCode'] ?? 'N/A',
-                                ),
-                              ),
-                            );
-                          },
-                          child: Text('Apri ${event['eventCode']}'),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.of(context).pop(),
                         ),
-                        const Divider(thickness: 1),
                       ],
                     ),
-                  );
-                }).toList(),
+                  ),
+
+                  // Contenuto scrollabile
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        children: eventJson.map<Widget>((event) {
+                          return Card(
+                            elevation: 0,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceVariant
+                                .withOpacity(0.3),
+                            margin: const EdgeInsets.only(bottom: 16),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Titolo evento
+                                  Text(
+                                    event['eventName'] ?? 'N/A',
+                                    style:
+                                        Theme.of(context).textTheme.titleLarge,
+                                  ),
+                                  const SizedBox(height: 8),
+
+                                  // Codice evento
+                                  _buildInfoRow(
+                                    context,
+                                    Icons.code,
+                                    'Codice',
+                                    event['eventCode'] ?? 'N/A',
+                                  ),
+
+                                  // Date e orari
+                                  _buildInfoRow(
+                                    context,
+                                    Icons.calendar_today,
+                                    'Data Inizio',
+                                    event['eventDate'] ?? 'N/A',
+                                  ),
+                                  _buildInfoRow(
+                                    context,
+                                    Icons.event_available,
+                                    'Data Fine',
+                                    event['endDate'] ?? 'N/A',
+                                  ),
+                                  _buildInfoRow(
+                                    context,
+                                    Icons.access_time,
+                                    'Ora Fine',
+                                    event['endTime'] ?? 'N/A',
+                                  ),
+
+                                  const SizedBox(height: 16),
+
+                                  // Mappa
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: SizedBox(
+                                      height: 180,
+                                      width: double.infinity,
+                                      child: GoogleMap(
+                                        initialCameraPosition: CameraPosition(
+                                          target: LatLng(
+                                            double.tryParse(event['latitudine']
+                                                    .toString()) ??
+                                                0.0,
+                                            double.tryParse(event['longitude']
+                                                    .toString()) ??
+                                                0.0,
+                                          ),
+                                          zoom: 14.0,
+                                        ),
+                                        markers: {
+                                          Marker(
+                                            markerId: const MarkerId(
+                                                'event_location'),
+                                            position: LatLng(
+                                              double.tryParse(
+                                                      event['latitudine']
+                                                          .toString()) ??
+                                                  0.0,
+                                              double.tryParse(event['longitude']
+                                                      .toString()) ??
+                                                  0.0,
+                                            ),
+                                            infoWindow: InfoWindow(
+                                              title: event['eventName'] ??
+                                                  'Posizione Evento',
+                                            ),
+                                          ),
+                                        },
+                                        myLocationEnabled: false,
+                                        zoomControlsEnabled: false,
+                                        mapToolbarEnabled: false,
+                                      ),
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 16),
+
+                                  // Pulsante azione
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: FilledButton.icon(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                EventPageControl(
+                                              eventCode:
+                                                  event['eventCode'] ?? 'N/A',
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(Icons.visibility),
+                                      label: const Text('Visualizza Dettagli'),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+
+                  // Footer padding
+                  const SizedBox(height: 16),
+                ],
               ),
             ),
-            actions: [
-              TextButton(
-                child: const Text('Chiudi'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
           );
         },
       );
     }
+  }
+
+// Widget helper per le righe di informazioni
+  Widget _buildInfoRow(
+      BuildContext context, IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 18,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '$label:',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              value,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
