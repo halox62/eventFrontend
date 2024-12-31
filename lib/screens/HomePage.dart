@@ -51,11 +51,50 @@ class _HomepageState extends State<Homepage> {
   double? eventLongitude;
   bool hasError = false;
   //String host = "127.0.0.1:5000";
-  String host = "10.0.2.2:5000";
+  //String host = "10.0.2.2:5000";
+  String host = "event-production.up.railway.app";
   final TextEditingController _searchController = TextEditingController();
   late List<dynamic> profilesListSearch;
   late List<dynamic> imagesListSearch;
   late List<dynamic> emailsListSearch;
+
+  int? enlargedImageIndex;
+  bool isImageEnlarged = false;
+
+  void _handleImageTap(int index) {
+    setState(() {
+      if (enlargedImageIndex == index) {
+        enlargedImageIndex = null;
+        isImageEnlarged = false;
+      } else if (isImageEnlarged) {
+        enlargedImageIndex = null;
+        isImageEnlarged = false;
+      }
+    });
+  }
+
+  void _handleImageLongPress(int index) {
+    setState(() {
+      enlargedImageIndex = index;
+      isImageEnlarged = true;
+    });
+  }
+
+  Future<void> _handleRefresh() async {
+    try {
+      await _initializeData();
+    } catch (e) {
+      print('Errore durante il refresh: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Errore durante l\'aggiornamento'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
 
   bool isLoading = true;
 
@@ -71,10 +110,12 @@ class _HomepageState extends State<Homepage> {
       try {
         User? user = FirebaseAuth.instance.currentUser;
 
+        print(user);
+
         if (user != null) {
           String? idToken = await user.getIdToken(true);
           prefs.setString('jwtToken', idToken!);
-          initState();
+          _initializeData();
         } else {
           await Auth().signOut();
           Navigator.pushReplacement(
@@ -111,7 +152,7 @@ class _HomepageState extends State<Homepage> {
   }
 
   Future<void> _fetchEventCoordinates(String code) async {
-    final url = Uri.parse('http://' + host + '/get_coordinate');
+    final url = Uri.parse('https://' + host + '/get_coordinate');
     final headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
@@ -162,7 +203,7 @@ class _HomepageState extends State<Homepage> {
   Future<void> uploadImage(File imageFile) async {
     var request = http.MultipartRequest(
       'POST',
-      Uri.parse('http://' + host + '/upload'),
+      Uri.parse('https://' + host + '/upload'),
     );
     final headers = {
       'Content-Type': 'application/json',
@@ -189,8 +230,9 @@ class _HomepageState extends State<Homepage> {
       'Authorization': 'Bearer $token',
     };
     try {
-      final response = await http
-          .get(Uri.parse('http://' + host + '/getEventCode'), headers: headers);
+      final response = await http.get(
+          Uri.parse('https://' + host + '/getEventCode'),
+          headers: headers);
 
       if (response.statusCode == 200) {
         Map<String, dynamic> jsonResponse = json.decode(response.body);
@@ -234,7 +276,7 @@ class _HomepageState extends State<Homepage> {
           };
           var request = http.MultipartRequest(
             'POST',
-            Uri.parse('http://' + host + '/uploadEventImage'),
+            Uri.parse('https://' + host + '/uploadEventImage'),
           );
           request.headers.addAll(headers);
 
@@ -457,7 +499,7 @@ class _HomepageState extends State<Homepage> {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
     };
-    final url = Uri.parse('http://' + host + '/getImage');
+    final url = Uri.parse('https://' + host + '/getImage');
 
     try {
       final response = await http.post(url, headers: headers);
@@ -482,8 +524,8 @@ class _HomepageState extends State<Homepage> {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       };
-      final response = await http.post(Uri.parse('http://' + host + '/profile'),
-          headers: headers);
+      final response = await http
+          .post(Uri.parse('https://' + host + '/profile'), headers: headers);
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
@@ -514,7 +556,7 @@ class _HomepageState extends State<Homepage> {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
     };
-    final url = Uri.parse('http://' + host + '/delete_photo_by_url');
+    final url = Uri.parse('https://' + host + '/delete_photo_by_url');
     try {
       final response = await http.post(
         url,
@@ -549,7 +591,7 @@ class _HomepageState extends State<Homepage> {
   }
 
   Future<void> searchProfiles(String query) async {
-    String apiUrl = "http://" + host + "/search_profiles";
+    String apiUrl = "https://" + host + "/search_profiles";
 
     try {
       final response = await http.post(
@@ -668,7 +710,6 @@ class _HomepageState extends State<Homepage> {
 
     return Scaffold(
       backgroundColor: colorScheme.background,
-      // Modern AppBar con search integrato
       appBar: AppBar(
         elevation: 0,
         backgroundColor: colorScheme.surface,
@@ -680,6 +721,7 @@ class _HomepageState extends State<Homepage> {
           ),
           child: TextField(
             controller: _searchController,
+            onSubmitted: (query) => searchProfiles(query),
             decoration: InputDecoration(
               hintText: 'Cerca...',
               hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
@@ -697,8 +739,6 @@ class _HomepageState extends State<Homepage> {
           ),
         ),
       ),
-
-      // Drawer moderno
       drawer: NavigationDrawer(
         backgroundColor: colorScheme.surface,
         children: [
@@ -769,187 +809,225 @@ class _HomepageState extends State<Homepage> {
           ),
         ],
       ),
-
-      // Body con profile e grid
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                children: [
-                  // Profile section
-                  Row(
-                    children: [
-                      Hero(
-                        tag: 'profile-image',
-                        child: Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: colorScheme.shadow.withOpacity(0.1),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: CircleAvatar(
-                            radius: 40,
-                            backgroundColor: colorScheme.surfaceVariant,
-                            backgroundImage: profileImageUrl != null
-                                ? NetworkImage(profileImageUrl!)
-                                : null,
-                            child: profileImageUrl == null
-                                ? Icon(Icons.person,
-                                    size: 40,
-                                    color: colorScheme.onSurfaceVariant)
-                                : null,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 20),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await _handleRefresh();
+          // Se c'è un'immagine ingrandita, la chiudiamo dopo il refresh
+          setState(() {
+            enlargedImageIndex = null;
+            isImageEnlarged = false;
+          });
+        },
+        child: Stack(
+          children: [
+            CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      children: [
+                        Row(
                           children: [
-                            Text(
-                              userName ?? 'Unknown User',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                            ),
-                            const SizedBox(height: 4),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: colorScheme.primaryContainer,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                '${point ?? '0'} points',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .labelLarge
-                                    ?.copyWith(
-                                      color: colorScheme.onPrimaryContainer,
-                                      fontWeight: FontWeight.w500,
+                            Hero(
+                              tag: 'profile-image',
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color:
+                                          colorScheme.shadow.withOpacity(0.1),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
                                     ),
+                                  ],
+                                ),
+                                child: CircleAvatar(
+                                  radius: 40,
+                                  backgroundColor: colorScheme.surfaceVariant,
+                                  backgroundImage: profileImageUrl != null
+                                      ? NetworkImage(profileImageUrl!)
+                                      : null,
+                                  child: profileImageUrl == null
+                                      ? Icon(Icons.person,
+                                          size: 40,
+                                          color: colorScheme.onSurfaceVariant)
+                                      : null,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 20),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    userName ?? 'Unknown User',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleLarge
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.primaryContainer,
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      '${point ?? '0'} points',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelLarge
+                                          ?.copyWith(
+                                            color:
+                                                colorScheme.onPrimaryContainer,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Grid di immagini
-          images.isNotEmpty
-              ? SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  sliver: SliverGrid(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      childAspectRatio: 1,
-                    ),
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        return ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: colorScheme.surfaceVariant,
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: Image.network(
-                                  images[index],
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                              // Overlay scuro per il pulsante elimina
-                              Positioned(
-                                top: 8,
-                                right: 8,
-                                child: Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    borderRadius: BorderRadius.circular(20),
-                                    onTap: () =>
-                                        _showDeleteDialog(context, index),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withOpacity(0.5),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: const Icon(
-                                        Icons.delete_outline,
-                                        color: Colors.white,
-                                        size: 20,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                      childCount: images.length,
-                    ),
-                  ),
-                )
-              : SliverFillRemaining(
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.photo_library_outlined,
-                          size: 64,
-                          color: colorScheme.onSurfaceVariant.withOpacity(0.5),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Nessuna foto disponibile',
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Inizia a catturare un outfit accattivante, scala le classifiche',
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: colorScheme.onSurfaceVariant
-                                        .withOpacity(0.7),
-                                  ),
                         ),
                       ],
                     ),
                   ),
                 ),
-        ],
+                images.isNotEmpty
+                    ? SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        sliver: SliverGrid(
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
+                            childAspectRatio: 1,
+                          ),
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              return ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    GestureDetector(
+                                      onTap: () => _handleImageTap(index),
+                                      onLongPress: () =>
+                                          _handleImageLongPress(index),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: colorScheme.surfaceVariant,
+                                          borderRadius:
+                                              BorderRadius.circular(16),
+                                        ),
+                                        child: Image.network(
+                                          images[index],
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                    ),
+                                    Positioned(
+                                      top: 8,
+                                      right: 8,
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        child: InkWell(
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                          onTap: () =>
+                                              _showDeleteDialog(context, index),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              color:
+                                                  Colors.black.withOpacity(0.5),
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                            child: const Icon(
+                                              Icons.delete_outline,
+                                              color: Colors.white,
+                                              size: 20,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            childCount: images.length,
+                          ),
+                        ),
+                      )
+                    : SliverFillRemaining(
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.photo_library_outlined,
+                                size: 64,
+                                color: colorScheme.onSurfaceVariant
+                                    .withOpacity(0.5),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Nessuna foto disponibile',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Inizia a catturare un outfit accattivante, scala le classifiche',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: colorScheme.onSurfaceVariant
+                                          .withOpacity(0.7),
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+              ],
+            ),
+            if (isImageEnlarged && enlargedImageIndex != null)
+              GestureDetector(
+                onTap: () => _handleImageTap(enlargedImageIndex!),
+                child: Container(
+                  color: colorScheme.scrim.withOpacity(0.9),
+                  alignment: Alignment.center,
+                  child: Hero(
+                    tag: 'enlarged-image-${enlargedImageIndex!}',
+                    child: Image.network(
+                      images[enlargedImageIndex!],
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
-
-      // FAB e bottom bar moderni
       floatingActionButton: FloatingActionButton(
         onPressed: onTabTapped,
         elevation: 4,

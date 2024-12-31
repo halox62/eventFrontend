@@ -1,1 +1,0 @@
-// Mostra un indicatore di caricamento

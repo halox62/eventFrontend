@@ -22,8 +22,12 @@ class _ProfilePageState extends State<ProfilePage> {
   List<String> images = [];
   bool isLoading = true;
   String? token;
-  //String host = "127.0.0.1:5000";
-  String host = "10.0.2.2:5000";
+  //String host = "10.0.2.2:5000";
+  String host = "event-production.up.railway.app";
+
+  // Add state for tracking enlarged image
+  int? enlargedImageIndex;
+  bool isImageEnlarged = false;
 
   @override
   void initState() {
@@ -72,7 +76,7 @@ class _ProfilePageState extends State<ProfilePage> {
         'Authorization': 'Bearer $token',
       };
       final response = await http.post(
-        Uri.parse('http://' + host + '/profile'),
+        Uri.parse('https://' + host + '/profile'),
         headers: headers,
         body: jsonEncode({
           'email': userEmail,
@@ -104,7 +108,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> fetchImages(String email) async {
-    final url = Uri.parse('http://' + host + '/getImage');
+    final url = Uri.parse('https://' + host + '/getImage');
     final headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
@@ -129,6 +133,27 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  void _handleImageTap(int index) {
+    setState(() {
+      if (enlargedImageIndex == index) {
+        // If tapping the already enlarged image, reset it
+        enlargedImageIndex = null;
+        isImageEnlarged = false;
+      } else if (isImageEnlarged) {
+        // If another image is enlarged, reset it
+        enlargedImageIndex = null;
+        isImageEnlarged = false;
+      }
+    });
+  }
+
+  void _handleImageLongPress(int index) {
+    setState(() {
+      enlargedImageIndex = index;
+      isImageEnlarged = true;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -137,51 +162,71 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Column(
+          : Stack(
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircleAvatar(
-                        radius: 40,
-                        backgroundImage: profileImageUrl != null
-                            ? NetworkImage(profileImageUrl!)
-                            : null,
-                        child: profileImageUrl == null
-                            ? const Icon(Icons.person, size: 40)
-                            : null,
+                Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircleAvatar(
+                            radius: 40,
+                            backgroundImage: profileImageUrl != null
+                                ? NetworkImage(profileImageUrl!)
+                                : null,
+                            child: profileImageUrl == null
+                                ? const Icon(Icons.person, size: 40)
+                                : null,
+                          ),
+                          const SizedBox(width: 16),
+                          Text(
+                            userName ?? 'Unknown User',
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 16),
-                      Text(
-                        userName ?? 'Unknown User',
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: GridView.builder(
-                    padding: const EdgeInsets.all(10),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      crossAxisSpacing: 8,
-                      mainAxisSpacing: 8,
                     ),
-                    itemCount: images.length,
-                    itemBuilder: (context, index) {
-                      return Image.network(
-                        images[index],
-                        fit: BoxFit.cover,
-                      );
-                    },
-                  ),
+                    Expanded(
+                      child: GridView.builder(
+                        padding: const EdgeInsets.all(10),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 8,
+                        ),
+                        itemCount: images.length,
+                        itemBuilder: (context, index) {
+                          return GestureDetector(
+                            onTap: () => _handleImageTap(index),
+                            onLongPress: () => _handleImageLongPress(index),
+                            child: Image.network(
+                              images[index],
+                              fit: BoxFit.cover,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
+                if (isImageEnlarged && enlargedImageIndex != null)
+                  GestureDetector(
+                    onTap: () => _handleImageTap(enlargedImageIndex!),
+                    child: Container(
+                      color: Colors.black87,
+                      alignment: Alignment.center,
+                      child: Image.network(
+                        images[enlargedImageIndex!],
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
               ],
             ),
     );

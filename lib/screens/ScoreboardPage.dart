@@ -20,7 +20,8 @@ class _ScoreboardPageState extends State<ScoreboardPage> {
   bool _isLoading = true;
   bool _hasError = false;
   //String host = "127.0.0.1:5000";
-  String host = "10.0.2.2:5000";
+  //String host = "10.0.2.2:5000";
+  String host = "event-production.up.railway.app";
   String? token;
   /*List<dynamic> _userRanking = [];
   bool _isLoadingTop100 = true;
@@ -72,7 +73,7 @@ class _ScoreboardPageState extends State<ScoreboardPage> {
         'Authorization': 'Bearer $token',
       };
       final response = await http.get(
-          Uri.parse('http://' + host + '/get_scoreboard'),
+          Uri.parse('https://' + host + '/get_scoreboard'),
           headers: headers);
 
       if (response.statusCode == 200) {
@@ -128,27 +129,159 @@ class _ScoreboardPageState extends State<ScoreboardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text('Scoreboard'),
+        elevation: 0,
+        backgroundColor: Colors.white,
+        title: const Text(
+          'Scoreboard',
+          style: TextStyle(
+            color: Colors.black87,
+            fontSize: 24,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
-      body: _isLoading
+      body: _isLoading && _scoreboard.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : _hasError
-              ? const Center(child: Text('Error loading scoreboard'))
-              : ListView.builder(
-                  itemCount: _scoreboard.length,
-                  itemBuilder: (context, index) {
-                    final user = _scoreboard[index];
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundImage: NetworkImage(user['profileImageUrl']),
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error_outline,
+                          size: 48, color: Colors.grey[400]),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Unable to load scoreboard',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 16,
+                        ),
                       ),
-                      title: Text(user['userName']),
-                      subtitle: Text('Points: ${user['point']}'),
-                      trailing: Text('#${index + 1}'),
-                    );
-                  },
+                    ],
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _handleRefresh,
+                  child: ListView.separated(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _scoreboard.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final user = _scoreboard[index];
+                      final isTopThree = index < 3;
+
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  image: DecorationImage(
+                                    image:
+                                        NetworkImage(user['profileImageUrl']),
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      user['userName'],
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${user['point']} points',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: isTopThree
+                                      ? _getRankColor(index)
+                                      : Colors.grey[100],
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '#${index + 1}',
+                                    style: TextStyle(
+                                      color: isTopThree
+                                          ? Colors.white
+                                          : Colors.grey[600],
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
     );
+  }
+
+  Future<void> _handleRefresh() async {
+    try {
+      await _fetchScoreboard();
+    } catch (e) {
+      print('Errore durante il refresh: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Errore durante l\'aggiornamento'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Color _getRankColor(int index) {
+    switch (index) {
+      case 0:
+        return const Color(0xFFFFD700); // Gold
+      case 1:
+        return const Color(0xFFC0C0C0); // Silver
+      case 2:
+        return const Color(0xFFCD7F32); // Bronze
+      default:
+        return Colors.grey;
+    }
   }
 }

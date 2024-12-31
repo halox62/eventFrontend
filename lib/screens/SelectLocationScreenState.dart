@@ -54,6 +54,7 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
 
     try {
       Position position = await Geolocator.getCurrentPosition(
+          // ignore: deprecated_member_use
           desiredAccuracy: LocationAccuracy.high);
 
       setState(() {

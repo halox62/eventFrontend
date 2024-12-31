@@ -32,8 +32,10 @@ class Event extends State<EventCalendar> {
   List<DateTime> addEventDates = [];
   List<dynamic> eventJson = [];
   //String host = "127.0.0.1:5000";
-  String host = "10.0.2.2:5000";
+  //String host = "10.0.2.2:5000";
+  String host = "event-production.up.railway.app";
   String eventName = "";
+  bool creator = false;
 
   @override
   void initState() {
@@ -47,6 +49,93 @@ class Event extends State<EventCalendar> {
       await _initializeEventSubscribe();
     } catch (e) {
       print('Error: $e');
+    }
+  }
+
+  Future<bool> Creator() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    token = prefs.getString('jwtToken');
+
+    if (token != null) {
+      try {
+        final headers = {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        };
+        final response = await http
+            .get(Uri.parse('https://' + host + '/creator'), headers: headers);
+
+        if (response.statusCode == 200) {
+          return true;
+        } else {
+          _checkTokenValidity(response.statusCode);
+          return false;
+        }
+      } catch (e) {
+        return false;
+      }
+    }
+    return false;
+  }
+
+  Future<void> delete_event(String eventCode) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('jwtToken');
+
+    if (token == null) {
+      _showFeedbackMessage('Errore: Sessione non valida', isError: true);
+      return;
+    }
+
+    try {
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+
+      final body = jsonEncode({
+        'eventCode': eventCode,
+      });
+
+      final response = await http.post(
+        Uri.parse('https://$host/delete_event'),
+        headers: headers,
+        body: body,
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Evento cancellato con successo!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        await _initializeEventCreate();
+        await _initializeEventSubscribe();
+      } else {
+        _showFeedbackMessage('Errore durante l\'eliminazione dell\'evento',
+            isError: true);
+      }
+    } catch (e) {
+      _showFeedbackMessage('Errore di connessione durante l\'eliminazione',
+          isError: true);
+    }
+  }
+
+  Future<void> _handleRefresh() async {
+    try {
+      await _initializeEventCreate();
+      await _initializeEventSubscribe();
+    } catch (e) {
+      print('Errore durante il refresh: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Errore durante l\'aggiornamento'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
@@ -88,7 +177,7 @@ class Event extends State<EventCalendar> {
           'Authorization': 'Bearer $token',
         };
         final response = await http.get(
-            Uri.parse('http://' + host + '/createGetEventDates'),
+            Uri.parse('https://' + host + '/createGetEventDates'),
             headers: headers);
 
         if (response.statusCode == 200) {
@@ -133,7 +222,7 @@ class Event extends State<EventCalendar> {
     // Formatta la data come yyyy-MM-dd
     String dateOnly = DateFormat('yyyy-MM-dd').format(date);
 
-    final url = Uri.parse('http://' + host + '/events_by_date');
+    final url = Uri.parse('https://' + host + '/events_by_date');
 
     final body = jsonEncode({'date': dateOnly});
 
@@ -157,188 +246,279 @@ class Event extends State<EventCalendar> {
     }
   }
 
+  void _showDeleteConfirmation(
+      BuildContext context, String eventCode, String eventName) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Conferma eliminazione'),
+          content:
+              Text('Sei sicuro di voler eliminare l\'evento "$eventName"?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Annulla'),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await delete_event(eventCode);
+              },
+              child: const Text('Elimina'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   // Funzione per mostrare i dettagli dell'evento
   void _showEventDetails(DateTime date) async {
-    await fetchEventsByDate(date);
-    if (eventJson.isNotEmpty) {
-      showDialog(
+    try {
+      // Mostra un dialog di caricamento
+      /* showDialog(
         context: context,
-        builder: (context) {
-          return Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Container(
-              constraints: const BoxConstraints(
-                maxWidth: 500, // Limita la larghezza massima per desktop
-                maxHeight: 700, // Limita l'altezza massima
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Header con titolo e pulsante di chiusura
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 24, 16, 16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Dettagli Eventi',
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineSmall
-                              ?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.of(context).pop(),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Contenuto scrollabile
-                  Flexible(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Column(
-                        children: eventJson.map<Widget>((event) {
-                          return Card(
-                            elevation: 0,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .surfaceVariant
-                                .withOpacity(0.3),
-                            margin: const EdgeInsets.only(bottom: 16),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Titolo evento
-                                  Text(
-                                    event['eventName'] ?? 'N/A',
-                                    style:
-                                        Theme.of(context).textTheme.titleLarge,
-                                  ),
-                                  const SizedBox(height: 8),
-
-                                  // Codice evento
-                                  _buildInfoRow(
-                                    context,
-                                    Icons.code,
-                                    'Codice',
-                                    event['eventCode'] ?? 'N/A',
-                                  ),
-
-                                  // Date e orari
-                                  _buildInfoRow(
-                                    context,
-                                    Icons.calendar_today,
-                                    'Data Inizio',
-                                    event['eventDate'] ?? 'N/A',
-                                  ),
-                                  _buildInfoRow(
-                                    context,
-                                    Icons.event_available,
-                                    'Data Fine',
-                                    event['endDate'] ?? 'N/A',
-                                  ),
-                                  _buildInfoRow(
-                                    context,
-                                    Icons.access_time,
-                                    'Ora Fine',
-                                    event['endTime'] ?? 'N/A',
-                                  ),
-
-                                  const SizedBox(height: 16),
-
-                                  // Mappa
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: SizedBox(
-                                      height: 180,
-                                      width: double.infinity,
-                                      child: GoogleMap(
-                                        initialCameraPosition: CameraPosition(
-                                          target: LatLng(
-                                            double.tryParse(event['latitudine']
-                                                    .toString()) ??
-                                                0.0,
-                                            double.tryParse(event['longitude']
-                                                    .toString()) ??
-                                                0.0,
-                                          ),
-                                          zoom: 14.0,
-                                        ),
-                                        markers: {
-                                          Marker(
-                                            markerId: const MarkerId(
-                                                'event_location'),
-                                            position: LatLng(
-                                              double.tryParse(
-                                                      event['latitudine']
-                                                          .toString()) ??
-                                                  0.0,
-                                              double.tryParse(event['longitude']
-                                                      .toString()) ??
-                                                  0.0,
-                                            ),
-                                            infoWindow: InfoWindow(
-                                              title: event['eventName'] ??
-                                                  'Posizione Evento',
-                                            ),
-                                          ),
-                                        },
-                                        myLocationEnabled: false,
-                                        zoomControlsEnabled: false,
-                                        mapToolbarEnabled: false,
-                                      ),
-                                    ),
-                                  ),
-
-                                  const SizedBox(height: 16),
-
-                                  // Pulsante azione
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: FilledButton.icon(
-                                      onPressed: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                EventPageControl(
-                                              eventCode:
-                                                  event['eventCode'] ?? 'N/A',
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                      icon: const Icon(Icons.visibility),
-                                      label: const Text('Visualizza Dettagli'),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ),
-
-                  // Footer padding
-                  const SizedBox(height: 16),
-                ],
-              ),
-            ),
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const Center(
+            child: CircularProgressIndicator(),
           );
         },
       );
+
+      // Chiude il dialog di caricamento
+      Navigator.of(context).pop();*/
+
+      final events = await fetchEventsByDate(date);
+
+      if (events.isNotEmpty) {
+        showDialog(
+          context: context,
+          builder: (context) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Container(
+                constraints: const BoxConstraints(
+                  maxWidth: 500,
+                  maxHeight: 700,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 24, 16, 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Dettagli Eventi',
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineSmall
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Column(
+                          children: eventJson.map<Widget>((event) {
+                            return FutureBuilder<bool>(
+                              future: Creator(),
+                              builder: (context, snapshot) {
+                                final bool isCreator = snapshot.data ?? false;
+
+                                return Card(
+                                  elevation: 0,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .surfaceContainerHighest
+                                      .withOpacity(0.3),
+                                  margin: const EdgeInsets.only(bottom: 16),
+                                  child: Stack(
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.all(16),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    event['eventName'] ?? 'N/A',
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .titleLarge,
+                                                  ),
+                                                ),
+                                                if (isCreator)
+                                                  FloatingActionButton.small(
+                                                    onPressed: () =>
+                                                        _showDeleteConfirmation(
+                                                            context,
+                                                            event['eventCode'] ??
+                                                                '',
+                                                            event['eventName'] ??
+                                                                'questo evento'),
+                                                    backgroundColor: Colors.red,
+                                                    child: const Icon(
+                                                        Icons.delete,
+                                                        color: Colors.white),
+                                                  ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 8),
+                                            _buildInfoRow(
+                                              context,
+                                              Icons.event,
+                                              'Codice',
+                                              event['eventCode'] ?? 'N/A',
+                                            ),
+                                            _buildInfoRow(
+                                              context,
+                                              Icons.calendar_today,
+                                              'Data Inizio',
+                                              event['eventDate'] ?? 'N/A',
+                                            ),
+                                            _buildInfoRow(
+                                              context,
+                                              Icons.event_available,
+                                              'Data Fine',
+                                              event['endDate'] ?? 'N/A',
+                                            ),
+                                            _buildInfoRow(
+                                              context,
+                                              Icons.access_time,
+                                              'Ora Fine',
+                                              event['endTime'] ?? 'N/A',
+                                            ),
+                                            const SizedBox(height: 16),
+                                            ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              child: SizedBox(
+                                                height: 180,
+                                                width: double.infinity,
+                                                child: GoogleMap(
+                                                  initialCameraPosition:
+                                                      CameraPosition(
+                                                    target: LatLng(
+                                                      double.tryParse(event[
+                                                                  'latitudine']
+                                                              .toString()) ??
+                                                          0.0,
+                                                      double.tryParse(event[
+                                                                  'longitude']
+                                                              .toString()) ??
+                                                          0.0,
+                                                    ),
+                                                    zoom: 14.0,
+                                                  ),
+                                                  markers: {
+                                                    Marker(
+                                                      markerId: const MarkerId(
+                                                          'event_location'),
+                                                      position: LatLng(
+                                                        double.tryParse(event[
+                                                                    'latitudine']
+                                                                .toString()) ??
+                                                            0.0,
+                                                        double.tryParse(event[
+                                                                    'longitude']
+                                                                .toString()) ??
+                                                            0.0,
+                                                      ),
+                                                      infoWindow: InfoWindow(
+                                                        title: event[
+                                                                'eventName'] ??
+                                                            'Posizione Evento',
+                                                      ),
+                                                    ),
+                                                  },
+                                                  myLocationEnabled: false,
+                                                  zoomControlsEnabled: false,
+                                                  mapToolbarEnabled: false,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 16),
+                                            SizedBox(
+                                              width: double.infinity,
+                                              child: FilledButton.icon(
+                                                onPressed: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (context) =>
+                                                          EventPageControl(
+                                                        eventCode: event[
+                                                                'eventCode'] ??
+                                                            'N/A',
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                                icon: const Icon(
+                                                    Icons.visibility),
+                                                label: const Text(
+                                                    'Visualizza Dettagli'),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      } else {
+        _showFeedbackMessage('Nessun evento trovato per questa data');
+      }
+    } catch (e) {
+      _showFeedbackMessage('Errore nel caricamento degli eventi',
+          isError: true);
     }
+  }
+
+  void _showFeedbackMessage(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
 // Widget helper per le righe di informazioni
@@ -378,72 +558,75 @@ class Event extends State<EventCalendar> {
       appBar: AppBar(
         title: const Text('Calendario Eventi'),
       ),
-      body: TableCalendar(
-        firstDay: DateTime.utc(2020, 10, 16),
-        lastDay: DateTime.utc(2030, 10, 16),
-        focusedDay: DateTime.now(),
-        calendarStyle: const CalendarStyle(
-          todayDecoration: BoxDecoration(
-            color: Colors.green,
-            shape: BoxShape.circle,
-          ),
-
-          // Evidenzia le date contenute in highlightedDates
-          selectedDecoration: BoxDecoration(
-            color: Colors.orange,
-            shape: BoxShape.circle,
-          ),
-          // Evidenzia le date contenute in addEventDates di blu
-          markerDecoration: BoxDecoration(
-            color: Colors.blue,
-            shape: BoxShape.circle,
-          ),
-        ),
-        selectedDayPredicate: (day) {
-          // Controlla se la data corrente è in highlightedDates
-          return highlightedDates
-              .any((highlightedDay) => isSameDay(highlightedDay, day));
-        },
-        onDaySelected: (selectedDay, focusedDay) {
-          // Controlla se la data selezionata è un evento e mostra i dettagli
-          if (highlightedDates.any(
-              (highlightedDay) => isSameDay(highlightedDay, selectedDay))) {
-            _showEventDetails(selectedDay);
-          } else if (addEventDates
-              .any((eventDate) => isSameDay(eventDate, selectedDay))) {
-            _showEventDetails(
-                selectedDay); // Mostra i dettagli per le date in addEventDates
-          }
-        },
-
-        // Aggiungi i marker per evidenziare le date di addEventDates in blu
-        calendarBuilders: CalendarBuilders(
-          markerBuilder: (context, date, events) {
-            if (addEventDates.any((eventDate) => isSameDay(eventDate, date))) {
-              return Stack(
-                alignment: Alignment.center,
-                children: [
-                  Container(
-                    decoration: const BoxDecoration(
-                      color: Colors.blue,
-                      shape: BoxShape.circle,
-                    ),
-                    width: 40,
-                    height: 40,
+      body: RefreshIndicator(
+        onRefresh: _handleRefresh,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            children: [
+              TableCalendar(
+                firstDay: DateTime.utc(2020, 10, 16),
+                lastDay: DateTime.utc(2030, 10, 16),
+                focusedDay: DateTime.now(),
+                calendarStyle: const CalendarStyle(
+                  todayDecoration: BoxDecoration(
+                    color: Colors.green,
+                    shape: BoxShape.circle,
                   ),
-                  Text(
-                    '${date.day}', // Mostra il numero del giorno
-                    style: const TextStyle(
-                      color: Colors
-                          .white, // Colore del testo (bianco per contrastare il blu)
-                      fontWeight: FontWeight.bold,
-                    ),
+                  selectedDecoration: BoxDecoration(
+                    color: Colors.orange,
+                    shape: BoxShape.circle,
                   ),
-                ],
-              );
-            }
-            return null; // Se la data non è in addEventDates, non mostrare niente
-          },
+                  markerDecoration: BoxDecoration(
+                    color: Colors.blue,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                selectedDayPredicate: (day) {
+                  return highlightedDates
+                      .any((highlightedDay) => isSameDay(highlightedDay, day));
+                },
+                onDaySelected: (selectedDay, focusedDay) {
+                  if (highlightedDates.any((highlightedDay) =>
+                      isSameDay(highlightedDay, selectedDay))) {
+                    _showEventDetails(selectedDay);
+                  } else if (addEventDates
+                      .any((eventDate) => isSameDay(eventDate, selectedDay))) {
+                    _showEventDetails(selectedDay);
+                  }
+                },
+                calendarBuilders: CalendarBuilders(
+                  markerBuilder: (context, date, events) {
+                    if (addEventDates
+                        .any((eventDate) => isSameDay(eventDate, date))) {
+                      return Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            decoration: const BoxDecoration(
+                              color: Colors.blue,
+                              shape: BoxShape.circle,
+                            ),
+                            width: 40,
+                            height: 40,
+                          ),
+                          Text(
+                            '${date.day}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+                    return null;
+                  },
+                ),
+              ),
+              const SizedBox(height: 100),
+            ],
+          ),
         ),
       ),
       floatingActionButton: Column(
@@ -454,118 +637,200 @@ class Event extends State<EventCalendar> {
             children: <Widget>[
               Expanded(
                 child: Container(
-                  margin: const EdgeInsets.symmetric(
-                      horizontal: 4.0), // Spaziatura tra i pulsanti
+                  margin: const EdgeInsets.symmetric(horizontal: 4.0),
                   child: FloatingActionButton(
-                    heroTag: "btn1", // Un tag univoco per il primo pulsante
+                    heroTag: "btn1",
                     onPressed: () {
-                      // Azione del primo pulsante
                       _showCreateEventDialog(context);
                     },
                     child: const Icon(Icons.add),
                     backgroundColor: Colors.amber[800],
-                    elevation: 4.0, // Aggiungi un'ombra per effetto
+                    elevation: 4.0,
                   ),
                 ),
               ),
               Expanded(
                 child: Container(
-                  margin: const EdgeInsets.symmetric(
-                      horizontal: 4.0), // Spaziatura tra i pulsanti
+                  margin: const EdgeInsets.symmetric(horizontal: 4.0),
                   child: FloatingActionButton(
-                    heroTag: "btn2", // Un tag univoco per il secondo pulsante
+                    heroTag: "btn2",
                     onPressed: () {
                       _showAnotherDialog(context);
                     },
-                    child:
-                        const Icon(Icons.event), // Scegli un'icona appropriata
-                    backgroundColor: Colors.blue, // Colore del secondo pulsante
-                    elevation: 4.0, // Aggiungi un'ombra per effetto
+                    child: const Icon(Icons.event),
+                    backgroundColor: Colors.blue,
+                    elevation: 4.0,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(
-              height: 16), // Spazio tra i pulsanti e il bordo inferiore
+          const SizedBox(height: 16),
         ],
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation
-          .centerFloat, // Posiziona i pulsanti al centro
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 
   Future<void> _showAnotherDialog(BuildContext context) async {
-    TextEditingController codeController = TextEditingController();
+    final TextEditingController codeController = TextEditingController();
+    final theme = Theme.of(context);
 
-    showDialog(
+    return showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Aggiungi codice evento'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ElevatedButton.icon(
-                onPressed: () async {
-                  var result = await BarcodeScanner.scan();
-                  if (result.rawContent.isNotEmpty) {
-                    codeController.text = result.rawContent;
-                  }
-                },
-                icon: const Icon(Icons.qr_code_scanner),
-                label: const Text('Scansiona QR Code'),
-              ),
-              const Text("O"),
-              const SizedBox(height: 16),
-              TextField(
-                controller: codeController,
-                maxLength: 8,
-                decoration: const InputDecoration(
-                  labelText: 'Inserisci codice (8 caratteri)',
-                  hintText: 'Codice evento',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.text,
-                inputFormatters: [
-                  LengthLimitingTextInputFormatter(8),
-                  FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
-                ],
-              ),
-            ],
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
           ),
-          actions: [
-            TextButton(
-              child: const Text('Annulla'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 400),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Aggiungi codice evento',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    var result = await BarcodeScanner.scan();
+                    if (result.rawContent.isNotEmpty) {
+                      codeController.text = result.rawContent;
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: theme.colorScheme.onPrimary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: const Icon(Icons.qr_code_scanner, size: 24),
+                  label: const Text(
+                    'Scansiona QR Code',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'oppure',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: codeController,
+                  maxLength: 8,
+                  style: const TextStyle(fontSize: 16),
+                  decoration: InputDecoration(
+                    labelText: 'Codice evento',
+                    hintText: 'Inserisci 8 caratteri',
+                    labelStyle: TextStyle(color: theme.colorScheme.primary),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: theme.colorScheme.outline),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: theme.colorScheme.primary,
+                        width: 2,
+                      ),
+                    ),
+                    filled: true,
+                    fillColor: theme.colorScheme.surface,
+                    counterText: '',
+                  ),
+                  textAlign: TextAlign.center,
+                  keyboardType: TextInputType.text,
+                  textCapitalization: TextCapitalization.characters,
+                  inputFormatters: [
+                    LengthLimitingTextInputFormatter(8),
+                    FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                      ),
+                      child: Text(
+                        'Annulla',
+                        style: TextStyle(
+                          color: theme.colorScheme.secondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        if (codeController.text.length == 8) {
+                          addEvent(codeController.text);
+                          Navigator.of(context).pop();
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text(
+                                'Inserisci un codice valido a 8 caratteri.',
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: theme.colorScheme.onPrimary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Conferma',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            TextButton(
-              child: const Text('Conferma'),
-              onPressed: () {
-                if (codeController.text.length == 8) {
-                  // Logica per processare il codice inserito
-                  addEvent(codeController.text);
-                  Navigator.of(context).pop();
-                } else {
-                  // Mostra un errore se il codice non è valido
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content:
-                            Text('Inserisci un codice valido a 8 caratteri.')),
-                  );
-                }
-              },
-            ),
-          ],
+          ),
         );
       },
     );
   }
 
   void addEvent(String code) async {
-    final url = Uri.parse('http://' + host + '/addEvent');
+    final url = Uri.parse('https://' + host + '/addEvent');
     try {
       final headers = {
         'Content-Type': 'application/json',
@@ -578,9 +843,22 @@ class Event extends State<EventCalendar> {
       );
 
       if (response.statusCode == 200) {
-        initState();
+        await _initializeEventCreate();
+        await _initializeEventSubscribe();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Evento aggiunto con successo!'),
+            backgroundColor: Colors.green,
+          ),
+        );
       } else {
         _checkTokenValidity(response.statusCode);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Evento non aggiunto!'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } catch (error) {
       print('Errore durante la richiesta: $error');
@@ -592,134 +870,239 @@ class Event extends State<EventCalendar> {
     LatLng? location;
     LatLng? selectedLocation;
     DateTime? selectedDate;
+    final theme = Theme.of(context);
 
     showDialog(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Crea Evento'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    onChanged: (value) {
-                      setState(() {
-                        eventName = value;
-                      });
-                    },
-                    decoration: const InputDecoration(
-                      labelText: 'Nome Evento',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: () async {
-                      DateTime? pickedDate = await showDatePicker(
-                        context: context,
-                        initialDate: selectedDate ?? DateTime.now(),
-                        firstDate: DateTime(2000),
-                        lastDate: DateTime(2101),
-                      );
-                      if (pickedDate != null) {
-                        setState(() {
-                          selectedDate = pickedDate;
-                        });
-                      }
-                    },
-                    child: const Text('Seleziona Data'),
-                  ),
-                  if (selectedDate != null)
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Container(
+                constraints:
+                    const BoxConstraints(maxWidth: 400, maxHeight: 600),
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
                     Text(
-                      '${selectedDate!.toLocal()}'.split(' ')[0],
+                      'Crea Evento',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-
-                  // Seleziona l'ora
-                  const SizedBox(height: 10),
-                  ElevatedButton(
-                    onPressed: () async {
-                      TimeOfDay? pickedTime = await showTimePicker(
-                        context: context,
-                        initialTime: selectedTime ?? TimeOfDay.now(),
-                      );
-                      if (pickedTime != null) {
-                        setState(() {
-                          selectedTime = pickedTime;
-                        });
-                      }
-                    },
-                    child: const Text('Seleziona Ora'),
-                  ),
-                  if (selectedTime != null) Text(selectedTime!.format(context)),
-
-                  // Inserisci il luogo
-                  ElevatedButton(
-                    onPressed: () async {
-                      location = await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SelectLocationScreen(),
+                    const SizedBox(height: 24),
+                    TextFormField(
+                      onChanged: (value) => setState(() => eventName = value),
+                      decoration: InputDecoration(
+                        labelText: 'Nome Evento',
+                        filled: true,
+                        fillColor: Colors.grey[50],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
                         ),
-                      );
-                      if (location != null) {
-                        setState(() {
-                          selectedLocation = location;
-                        });
-                      }
-                    },
-                    child: const Text('Seleziona Posizione'),
-                  ),
-                  if (selectedLocation != null)
-                    Expanded(
-                      child: GoogleMap(
-                        initialCameraPosition: CameraPosition(
-                          target: LatLng(selectedLocation!.latitude,
-                              selectedLocation!.longitude),
-                          zoom: 14.0,
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey[200]!),
                         ),
-                        markers: {
-                          Marker(
-                            markerId: const MarkerId("selected_location"),
-                            position: LatLng(selectedLocation!.latitude,
-                                selectedLocation!.longitude),
-                            infoWindow: InfoWindow(
-                              title: "Posizione Selezionata",
-                              snippet:
-                                  "${selectedLocation!.latitude}, ${selectedLocation!.longitude}",
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: theme.primaryColor),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildSelectionTile(
+                            context: context,
+                            icon: Icons.calendar_today,
+                            title: 'Data',
+                            value: selectedDate != null
+                                ? DateFormat('dd MMM yyyy')
+                                    .format(selectedDate!)
+                                : 'Seleziona',
+                            onTap: () async {
+                              final date = await showDatePicker(
+                                context: context,
+                                initialDate: selectedDate ?? DateTime.now(),
+                                firstDate: DateTime(2000),
+                                lastDate: DateTime(2101),
+                              );
+                              if (date != null) {
+                                setState(() => selectedDate = date);
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildSelectionTile(
+                            context: context,
+                            icon: Icons.access_time,
+                            title: 'Ora',
+                            value: selectedTime != null
+                                ? selectedTime!.format(context)
+                                : 'Seleziona',
+                            onTap: () async {
+                              final time = await showTimePicker(
+                                context: context,
+                                initialTime: selectedTime ?? TimeOfDay.now(),
+                              );
+                              if (time != null) {
+                                setState(() => selectedTime = time);
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildSelectionTile(
+                      context: context,
+                      icon: Icons.location_on,
+                      title: 'Posizione',
+                      value: selectedLocation != null
+                          ? '${selectedLocation!.latitude.toStringAsFixed(2)}, ${selectedLocation!.longitude.toStringAsFixed(2)}'
+                          : 'Seleziona',
+                      onTap: () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SelectLocationScreen(),
+                          ),
+                        );
+                        if (result != null) {
+                          setState(() {
+                            location = result;
+                            selectedLocation = result;
+                          });
+                        }
+                      },
+                    ),
+                    if (selectedLocation != null) ...[
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: GoogleMap(
+                            initialCameraPosition: CameraPosition(
+                              target: LatLng(selectedLocation!.latitude,
+                                  selectedLocation!.longitude),
+                              zoom: 14.0,
+                            ),
+                            markers: {
+                              Marker(
+                                markerId: const MarkerId("selected_location"),
+                                position: LatLng(selectedLocation!.latitude,
+                                    selectedLocation!.longitude),
+                                infoWindow: InfoWindow(
+                                  title: "Posizione Selezionata",
+                                  snippet:
+                                      "${selectedLocation!.latitude}, ${selectedLocation!.longitude}",
+                                ),
+                              ),
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: Text(
+                            'Annulla',
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton(
+                          onPressed: selectedDate == null ||
+                                  selectedTime == null ||
+                                  location == null
+                              ? null
+                              : () {
+                                  Navigator.of(context).pop();
+                                  _showQRCode(eventName, selectedDate!,
+                                      selectedTime!, location!);
+                                },
+                          style: ElevatedButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
                             ),
                           ),
-                        },
-                      ),
-                    )
-                ],
+                          child: const Text('Crea Evento'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              actions: [
-                TextButton(
-                  child: const Text('Annulla'),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                ),
-                TextButton(
-                  child: const Text('Crea Evento'),
-                  onPressed: selectedDate == null ||
-                          selectedTime == null ||
-                          location == null
-                      ? null
-                      : () {
-                          Navigator.of(context).pop();
-                          _showQRCode(eventName, selectedDate!, selectedTime!,
-                              location!);
-                        },
-                ),
-              ],
             );
           },
         );
       },
+    );
+  }
+
+  Widget _buildSelectionTile({
+    required BuildContext context,
+    required IconData icon,
+    required String title,
+    required String value,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[200]!),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 18, color: Colors.grey[600]),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -744,7 +1127,7 @@ class Event extends State<EventCalendar> {
 
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://' + host + '/createEvent'),
+        Uri.parse('https://' + host + '/createEvent'),
       );
 
       request.headers.addAll(headers);
@@ -790,9 +1173,23 @@ class Event extends State<EventCalendar> {
       var response = await request.send();
 
       if (response.statusCode == 201) {
+        await _initializeEventCreate();
+        await _initializeEventSubscribe();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Evento creato con successo!'),
+            backgroundColor: Colors.green,
+          ),
+        );
         return "ok";
       } else {
         _checkTokenValidity(response.statusCode);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Evento non creato!'),
+            backgroundColor: Colors.red,
+          ),
+        );
         return "NO";
       }
     } catch (error) {
@@ -847,11 +1244,6 @@ class Event extends State<EventCalendar> {
           );
         },
       );
-    } /* else {
-      String message = "Event not create";
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
-    }*/
+    }
   }
 }
