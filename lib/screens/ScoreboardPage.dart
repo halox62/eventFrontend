@@ -45,7 +45,7 @@ class _ScoreboardPageState extends State<ScoreboardPage> {
         if (user != null) {
           String? idToken = await user.getIdToken(true);
           prefs.setString('jwtToken', idToken!);
-          initState();
+          _fetchScoreboard();
         } else {
           await Auth().signOut();
           Navigator.pushReplacement(
@@ -66,7 +66,6 @@ class _ScoreboardPageState extends State<ScoreboardPage> {
   Future<void> _fetchScoreboard() async {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
-      userEmail = prefs.getString('userEmail');
       token = prefs.getString('jwtToken');
       final headers = {
         'Content-Type': 'application/json',

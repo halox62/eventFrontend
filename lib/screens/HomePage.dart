@@ -9,6 +9,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:social_flutter_giorgio/firebase_options.dart';
 import 'package:social_flutter_giorgio/screens/AuthPage.dart';
 import 'package:social_flutter_giorgio/screens/Event.dart';
+import 'package:social_flutter_giorgio/screens/ShareProfileDialog.dart';
 import 'package:social_flutter_giorgio/screens/profile.dart';
 import 'package:social_flutter_giorgio/screens/ScoreboardPage.dart';
 import '../auth.dart';
@@ -60,6 +61,13 @@ class _HomepageState extends State<Homepage> {
 
   int? enlargedImageIndex;
   bool isImageEnlarged = false;
+  late BuildContext _dialogContext;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeData();
+  }
 
   void _handleImageTap(int index) {
     setState(() {
@@ -98,19 +106,11 @@ class _HomepageState extends State<Homepage> {
 
   bool isLoading = true;
 
-  @override
-  void initState() {
-    super.initState();
-    _initializeData();
-  }
-
   Future<void> _checkTokenValidity(int statusCode) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     if (statusCode == 401) {
       try {
         User? user = FirebaseAuth.instance.currentUser;
-
-        print(user);
 
         if (user != null) {
           String? idToken = await user.getIdToken(true);
@@ -136,10 +136,13 @@ class _HomepageState extends State<Homepage> {
   Future<void> _initializeData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     token = prefs.getString('jwtToken');
+    userEmail = prefs.getString('email');
 
     if (token != null) {
+      showLoadingDialog("Loading");
       await fetchProfileData();
       await fetchImages();
+      Navigator.of(_dialogContext).pop();
     } else {
       setState(() {
         isLoading = false;
@@ -182,6 +185,30 @@ class _HomepageState extends State<Homepage> {
     }
   }
 
+  void showLoadingDialog(String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        _dialogContext = context;
+        return Dialog(
+          backgroundColor: Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(message),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> event() async {
     Navigator.push(
       context,
@@ -217,7 +244,7 @@ class _HomepageState extends State<Homepage> {
     var response = await request.send();
 
     if (response.statusCode == 200) {
-      //initState();
+      await _initializeData();
     } else {
       _checkTokenValidity(response.statusCode);
       print('Upload failed');
@@ -289,7 +316,7 @@ class _HomepageState extends State<Homepage> {
           var response = await request.send();
 
           if (response.statusCode == 200) {
-            //initState();
+            await _initializeData();
           } else {
             _checkTokenValidity(response.statusCode);
           }
@@ -308,7 +335,6 @@ class _HomepageState extends State<Homepage> {
   }
 
   void showEventsDialog(List<dynamic> events) {
-    print("helloooooo");
     final rootContext = context;
     showDialog(
       context: context,
@@ -377,14 +403,16 @@ class _HomepageState extends State<Homepage> {
   void onTabTapped() async {
     var index = 1;
     if (index == 1) {
-      // Scatta una foto
+      showLoadingDialog("Open Fotocamera");
       final image = await takePicture();
+      Navigator.of(_dialogContext).pop();
       if (image != null) {
         setState(() {
           _capturedImage = image;
         });
-
+        showLoadingDialog("Search Event");
         final isEnrolledInEvents = await checkUserEvents();
+        Navigator.of(_dialogContext).pop();
 
         if (isEnrolledInEvents != null) {
           showDialog(
@@ -480,7 +508,9 @@ class _HomepageState extends State<Homepage> {
             },
           );
         } else {
+          showLoadingDialog("Caricamento Foto");
           await uploadImage(image);
+          Navigator.of(_dialogContext).pop();
           _showUploadSuccess(context, false);
         }
       }
@@ -571,7 +601,7 @@ class _HomepageState extends State<Homepage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Foto eliminata con successo')),
         );
-        initState();
+        await _initializeData();
         return true;
       } else {
         _checkTokenValidity(response.statusCode);
@@ -725,7 +755,10 @@ class _HomepageState extends State<Homepage> {
             decoration: InputDecoration(
               hintText: 'Cerca...',
               hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
-              prefixIcon: Icon(Icons.search, color: colorScheme.primary),
+              prefixIcon: const Icon(
+                Icons.search,
+                color: Color.fromRGBO(0, 0, 0, 1),
+              ),
               border: InputBorder.none,
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -743,8 +776,8 @@ class _HomepageState extends State<Homepage> {
         backgroundColor: colorScheme.surface,
         children: [
           DrawerHeader(
-            decoration: BoxDecoration(
-              color: colorScheme.primaryContainer,
+            decoration: const BoxDecoration(
+              color: Color.fromRGBO(177, 233, 144, 1),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -792,15 +825,28 @@ class _HomepageState extends State<Homepage> {
             title: const Text('Connect'),
             onTap: () {
               Navigator.pop(context); // Chiude il drawer
-              // TODO: Implementa la navigazione per Connect
+              if (userEmail != null) {
+                showDialog(
+                  context: context,
+                  builder: (context) => ShareProfileDialog(email: userEmail),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Email non disponibile')),
+                );
+              }
             },
           ),
           const Divider(),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: FilledButton.tonalIcon(
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color.fromRGBO(177, 233, 144, 1),
+                foregroundColor: Colors.black,
+              ),
               onPressed: () {
-                Navigator.pop(context); // Chiude il drawer
+                Navigator.pop(context);
                 signOut();
               },
               icon: const Icon(Icons.logout),
@@ -812,7 +858,6 @@ class _HomepageState extends State<Homepage> {
       body: RefreshIndicator(
         onRefresh: () async {
           await _handleRefresh();
-          // Se c'è un'immagine ingrandita, la chiudiamo dopo il refresh
           setState(() {
             enlargedImageIndex = null;
             isImageEnlarged = false;
@@ -879,7 +924,8 @@ class _HomepageState extends State<Homepage> {
                                       vertical: 6,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: colorScheme.primaryContainer,
+                                      color:
+                                          const Color.fromRGBO(76, 175, 80, 1),
                                       borderRadius: BorderRadius.circular(20),
                                     ),
                                     child: Text(
@@ -1028,12 +1074,19 @@ class _HomepageState extends State<Homepage> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: onTabTapped,
-        elevation: 4,
-        backgroundColor: colorScheme.primary,
-        foregroundColor: colorScheme.onPrimary,
-        child: const Icon(Icons.add_a_photo),
+      floatingActionButton: SizedBox(
+        width: 300,
+        height: 60,
+        child: FloatingActionButton(
+          onPressed: onTabTapped,
+          elevation: 4,
+          backgroundColor: const Color.fromRGBO(76, 175, 80, 1),
+          foregroundColor: colorScheme.onPrimary,
+          child: const Icon(
+            Icons.add_a_photo,
+            size: 36,
+          ),
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
@@ -1042,11 +1095,11 @@ class _HomepageState extends State<Homepage> {
         color: colorScheme.surface,
         shape: const CircularNotchedRectangle(),
         notchMargin: 8,
-        child: Row(
+        child: const Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            const SizedBox(width: 48),
-            const SizedBox(width: 48),
+            SizedBox(width: 48),
+            SizedBox(width: 48),
           ],
         ),
       ),
@@ -1081,8 +1134,9 @@ class _HomepageState extends State<Homepage> {
             FilledButton(
               onPressed: () async {
                 Navigator.of(context).pop();
+                showLoadingDialog("Photo Deletion");
                 if (await _deletePhoto(images[index])) {
-                  // Mostra snackbar di conferma
+                  Navigator.of(_dialogContext).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: const Text('Foto eliminata con successo'),
@@ -1091,6 +1145,7 @@ class _HomepageState extends State<Homepage> {
                     ),
                   );
                 }
+                Navigator.of(_dialogContext).pop();
               },
               style: FilledButton.styleFrom(
                 backgroundColor: colorScheme.errorContainer,

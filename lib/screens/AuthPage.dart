@@ -39,6 +39,7 @@ class _AuthPageState extends State<AuthPage> {
 
       SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString('jwtToken', token!);
+      await prefs.setString('email', _email.text);
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const Homepage()),

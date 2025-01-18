@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-//import 'package:share_plus/share_plus.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,12 +20,11 @@ class EventCalendar extends StatefulWidget {
   const EventCalendar({Key? key}) : super(key: key);
 
   @override
-  Event createState() => Event();
+  _EventCalendarState createState() => _EventCalendarState();
 }
 
-class Event extends State<EventCalendar> {
+class _EventCalendarState extends State<EventCalendar> {
   String? userEmail;
-  String? token;
   DateTime? selectedDate;
   DateTime selectedDay = DateTime.now();
   List<DateTime> highlightedDates = [];
@@ -36,6 +35,7 @@ class Event extends State<EventCalendar> {
   String host = "event-production.up.railway.app";
   String eventName = "";
   bool creator = false;
+  late BuildContext _dialogContext;
 
   @override
   void initState() {
@@ -43,10 +43,36 @@ class Event extends State<EventCalendar> {
     _initializePageEvent();
   }
 
+  void showLoadingDialog(String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        _dialogContext = context;
+        return Dialog(
+          backgroundColor: Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(message),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _initializePageEvent() async {
     try {
+      showLoadingDialog("Caricamento Eventi");
       await _initializeEventCreate();
       await _initializeEventSubscribe();
+      Navigator.of(_dialogContext).pop();
     } catch (e) {
       print('Error: $e');
     }
@@ -54,7 +80,7 @@ class Event extends State<EventCalendar> {
 
   Future<bool> Creator() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    token = prefs.getString('jwtToken');
+    String? token = prefs.getString('jwtToken');
 
     if (token != null) {
       try {
@@ -120,12 +146,12 @@ class Event extends State<EventCalendar> {
       _showFeedbackMessage('Errore di connessione durante l\'eliminazione',
           isError: true);
     }
+    Navigator.of(_dialogContext).pop();
   }
 
   Future<void> _handleRefresh() async {
     try {
-      await _initializeEventCreate();
-      await _initializeEventSubscribe();
+      _initializePageEvent();
     } catch (e) {
       print('Errore durante il refresh: $e');
       if (mounted) {
@@ -168,7 +194,7 @@ class Event extends State<EventCalendar> {
 
   Future<void> _initializeEventCreate() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    token = prefs.getString('jwtToken');
+    String? token = prefs.getString('jwtToken');
 
     if (token != null) {
       try {
@@ -196,13 +222,15 @@ class Event extends State<EventCalendar> {
   }
 
   Future<void> _initializeEventSubscribe() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('jwtToken');
     try {
       final headers = {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       };
       final response = await http.get(
-          Uri.parse('http://' + host + '/subscribeGetEventDates'),
+          Uri.parse('https://' + host + '/subscribeGetEventDates'),
           headers: headers);
 
       if (response.statusCode == 200) {
@@ -219,6 +247,8 @@ class Event extends State<EventCalendar> {
   }
 
   Future<List<dynamic>> fetchEventsByDate(DateTime date) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('jwtToken');
     // Formatta la data come yyyy-MM-dd
     String dateOnly = DateFormat('yyyy-MM-dd').format(date);
 
@@ -279,26 +309,13 @@ class Event extends State<EventCalendar> {
   // Funzione per mostrare i dettagli dell'evento
   void _showEventDetails(DateTime date) async {
     try {
-      // Mostra un dialog di caricamento
-      /* showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
-        },
-      );
-
-      // Chiude il dialog di caricamento
-      Navigator.of(context).pop();*/
-
       final events = await fetchEventsByDate(date);
 
       if (events.isNotEmpty) {
         showDialog(
           context: context,
           builder: (context) {
+            _dialogContext = context;
             return Dialog(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -392,6 +409,7 @@ class Event extends State<EventCalendar> {
                                               Icons.event,
                                               'Codice',
                                               event['eventCode'] ?? 'N/A',
+                                              isCode: true,
                                             ),
                                             _buildInfoRow(
                                               context,
@@ -523,7 +541,8 @@ class Event extends State<EventCalendar> {
 
 // Widget helper per le righe di informazioni
   Widget _buildInfoRow(
-      BuildContext context, IconData icon, String label, String value) {
+      BuildContext context, IconData icon, String label, String value,
+      {bool isCode = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -542,12 +561,79 @@ class Event extends State<EventCalendar> {
           ),
           const SizedBox(width: 4),
           Expanded(
-            child: Text(
-              value,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            child: isCode
+                ? InkWell(
+                    onTap: () => _showQRCode1(context, value),
+                    child: Text(
+                      value,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
+                            decoration: TextDecoration.underline,
+                          ),
+                    ),
+                  )
+                : Text(
+                    value,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showQRCode1(BuildContext context, String code) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'QR Code Evento',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: QrImageView(
+                  data: code,
+                  version: QrVersions.auto,
+                  size: 200.0,
+                  backgroundColor: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                code,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -673,13 +759,14 @@ class Event extends State<EventCalendar> {
   }
 
   Future<void> _showAnotherDialog(BuildContext context) async {
+    final parentContext = context;
     final TextEditingController codeController = TextEditingController();
     final theme = Theme.of(context);
 
     return showDialog(
       context: context,
       barrierDismissible: true,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return Dialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -708,8 +795,8 @@ class Event extends State<EventCalendar> {
                   },
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: theme.colorScheme.primary,
-                    foregroundColor: theme.colorScheme.onPrimary,
+                    backgroundColor: Colors.green, // Changed to green
+                    foregroundColor: Colors.white, // White text for contrast
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -737,20 +824,22 @@ class Event extends State<EventCalendar> {
                   decoration: InputDecoration(
                     labelText: 'Codice evento',
                     hintText: 'Inserisci 8 caratteri',
-                    labelStyle: TextStyle(color: theme.colorScheme.primary),
+                    labelStyle: const TextStyle(
+                        color: Colors.green), // Changed to green
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: theme.colorScheme.outline),
+                      borderSide: const BorderSide(
+                          color: Colors.green), // Changed to green
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: theme.colorScheme.primary,
+                      borderSide: const BorderSide(
+                        color: Colors.green, // Changed to green
                         width: 2,
                       ),
                     ),
                     filled: true,
-                    fillColor: theme.colorScheme.surface,
+                    fillColor: Colors.white,
                     counterText: '',
                   ),
                   textAlign: TextAlign.center,
@@ -766,17 +855,17 @@ class Event extends State<EventCalendar> {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: () => Navigator.of(dialogContext).pop(),
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 12,
                         ),
                       ),
-                      child: Text(
+                      child: const Text(
                         'Annulla',
                         style: TextStyle(
-                          color: theme.colorScheme.secondary,
+                          color: Colors.green, // Changed to green
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -786,17 +875,12 @@ class Event extends State<EventCalendar> {
                       onPressed: () {
                         if (codeController.text.length == 8) {
                           addEvent(codeController.text);
-                          Navigator.of(context).pop();
+                          Navigator.of(dialogContext).pop();
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text(
-                                'Inserisci un codice valido a 8 caratteri.',
-                              ),
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
+                            const SnackBar(
+                              content: Text('Attenzione codice sbagliato!'),
+                              backgroundColor: Colors.red,
                             ),
                           );
                         }
@@ -806,8 +890,9 @@ class Event extends State<EventCalendar> {
                           horizontal: 16,
                           vertical: 12,
                         ),
-                        backgroundColor: theme.colorScheme.primary,
-                        foregroundColor: theme.colorScheme.onPrimary,
+                        backgroundColor: Colors.green, // Changed to green
+                        foregroundColor:
+                            Colors.white, // White text for contrast
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -830,6 +915,8 @@ class Event extends State<EventCalendar> {
   }
 
   void addEvent(String code) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('jwtToken');
     final url = Uri.parse('https://' + host + '/addEvent');
     try {
       final headers = {
@@ -855,7 +942,7 @@ class Event extends State<EventCalendar> {
         _checkTokenValidity(response.statusCode);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Evento non aggiunto!'),
+            content: Text('Attenzione codice sbagliato!'),
             backgroundColor: Colors.red,
           ),
         );
@@ -1119,6 +1206,8 @@ class Event extends State<EventCalendar> {
 // Funzione per creare l'evento
   Future<String> createEvent(String eventName, String code,
       DateTime selectedDate, TimeOfDay timeOfDay, LatLng location) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('jwtToken');
     try {
       final headers = {
         'Content-Type': 'application/json',
