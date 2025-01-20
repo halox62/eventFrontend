@@ -58,6 +58,7 @@ class _HomepageState extends State<Homepage> {
   late List<dynamic> profilesListSearch;
   late List<dynamic> imagesListSearch;
   late List<dynamic> emailsListSearch;
+  bool isLoading = true;
 
   int? enlargedImageIndex;
   bool isImageEnlarged = false;
@@ -92,7 +93,6 @@ class _HomepageState extends State<Homepage> {
     try {
       await _initializeData();
     } catch (e) {
-      print('Errore durante il refresh: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -103,8 +103,6 @@ class _HomepageState extends State<Homepage> {
       }
     }
   }
-
-  bool isLoading = true;
 
   Future<void> _checkTokenValidity(int statusCode) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -152,6 +150,10 @@ class _HomepageState extends State<Homepage> {
 
   Future<void> signOut() async {
     await Auth().signOut();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const AuthPage()),
+    );
   }
 
   Future<void> _fetchEventCoordinates(String code) async {
@@ -334,34 +336,173 @@ class _HomepageState extends State<Homepage> {
     }
   }
 
+  Future<String> getEventName(String eventCode) async {
+    try {
+      final response = await http.post(
+        Uri.parse('https://' + host + '/nameByCode'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token'
+        },
+        body: jsonEncode({
+          'code': eventCode,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['name'] ?? 'N/A';
+      } else {
+        return 'N/A';
+      }
+    } catch (e) {
+      print('Error fetching event name: $e');
+      return 'N/A';
+    }
+  }
+
   void showEventsDialog(List<dynamic> events) {
     final rootContext = context;
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Seleziona un evento'),
-          content: SingleChildScrollView(
-            child: ListBody(
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            constraints: const BoxConstraints(
+              maxWidth: 400,
+              maxHeight: 600,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                for (var i = 0; i < events.length; i++)
-                  GestureDetector(
-                    onTap: () async {
-                      await uploadImageForEvent(events[i]);
-                      await uploadImage(_capturedImage!);
-                      Navigator.of(context).pop(); // Chiudi il popup
-                      ScaffoldMessenger.of(rootContext).showSnackBar(
-                        SnackBar(
-                          content:
-                              Text('Foto caricata per l\'evento ${events[i]}'),
-                        ),
-                      );
-                    },
-                    child: ListTile(
-                      title: Text('Evento: ${events[i]}'),
-                      // subtitle: Text('Data: ${events[i]['eventDate']}'),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Seleziona un evento',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        for (var i = 0; i < events.length; i++)
+                          FutureBuilder<String>(
+                            future: getEventName(events[i]),
+                            builder: (context, snapshot) {
+                              final eventName =
+                                  snapshot.data ?? 'Caricamento...';
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: Card(
+                                  elevation: 2,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(12),
+                                    onTap: () async {
+                                      await uploadImageForEvent(events[i]);
+                                      Navigator.of(context).pop();
+                                      ScaffoldMessenger.of(rootContext)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Foto caricata per l\'evento $eventName',
+                                          ),
+                                          behavior: SnackBarBehavior.floating,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.all(8),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.green
+                                                      .withOpacity(0.1),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                                child: const Icon(
+                                                  Icons.event,
+                                                  color: Colors.green,
+                                                  size: 24,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      eventName,
+                                                      style: Theme.of(context)
+                                                          .textTheme
+                                                          .titleMedium
+                                                          ?.copyWith(
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                          ),
+                                                    ),
+                                                    const SizedBox(height: 4),
+                                                    Text(
+                                                      'Codice: ${events[i]}',
+                                                      style: Theme.of(context)
+                                                          .textTheme
+                                                          .bodyMedium
+                                                          ?.copyWith(
+                                                            color: Colors
+                                                                .grey[600],
+                                                          ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              const Icon(
+                                                Icons.arrow_forward_ios,
+                                                size: 16,
+                                                color: Colors.grey,
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                      ],
                     ),
                   ),
+                ),
               ],
             ),
           ),

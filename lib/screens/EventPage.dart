@@ -36,18 +36,18 @@ class EventPage extends State<EventPageControl> {
   String? point;
   Map<int, String> profileImages = {};
 
+  @override
+  void initState() {
+    super.initState();
+    _initializeEventPhotos();
+  }
+
   Future<void> _initializeEventPhotos() async {
     await _name();
     await _loadEventPhotos();
     await _loadLikePhotos();
     await _fetchEventCoordinates();
     await _loadUserProfiles();
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeEventPhotos();
   }
 
   Future<void> _handleRefresh() async {
@@ -58,7 +58,6 @@ class EventPage extends State<EventPageControl> {
       await _fetchEventCoordinates();
       await _loadUserProfiles();
     } catch (e) {
-      print('Errore durante il refresh: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

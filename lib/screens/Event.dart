@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:share_plus/share_plus.dart';
+//import 'package:share_plus/share_plus.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -74,7 +74,7 @@ class _EventCalendarState extends State<EventCalendar> {
       await _initializeEventSubscribe();
       Navigator.of(_dialogContext).pop();
     } catch (e) {
-      print('Error: $e');
+      _showFeedbackMessage('Errore durante il caricamento', isError: true);
     }
   }
 
@@ -153,7 +153,6 @@ class _EventCalendarState extends State<EventCalendar> {
     try {
       _initializePageEvent();
     } catch (e) {
-      print('Errore durante il refresh: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -216,7 +215,8 @@ class _EventCalendarState extends State<EventCalendar> {
           _checkTokenValidity(errorData['msg']);
         }
       } catch (e) {
-        print('Error: $e');
+        _showFeedbackMessage('Errore di connessione durante l\'eliminazione',
+            isError: true);
       }
     }
   }
@@ -242,7 +242,8 @@ class _EventCalendarState extends State<EventCalendar> {
         _checkTokenValidity(response.statusCode);
       }
     } catch (e) {
-      print('Error: $e');
+      _showFeedbackMessage('Errore di connessione durante l\'eliminazione',
+          isError: true);
     }
   }
 
@@ -495,6 +496,12 @@ class _EventCalendarState extends State<EventCalendar> {
                                                     ),
                                                   );
                                                 },
+                                                style: FilledButton.styleFrom(
+                                                  backgroundColor: Colors
+                                                      .green, // Imposta il colore di sfondo verde
+                                                  foregroundColor: Colors
+                                                      .white, // Imposta il colore del testo e dell'icona in bianco
+                                                ),
                                                 icon: const Icon(
                                                     Icons.visibility),
                                                 label: const Text(
@@ -550,13 +557,13 @@ class _EventCalendarState extends State<EventCalendar> {
           Icon(
             icon,
             size: 18,
-            color: Theme.of(context).colorScheme.primary,
+            color: Colors.black,
           ),
           const SizedBox(width: 8),
           Text(
             '$label:',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  color: Colors.black,
                 ),
           ),
           const SizedBox(width: 4),
@@ -567,7 +574,7 @@ class _EventCalendarState extends State<EventCalendar> {
                     child: Text(
                       value,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
+                            color: Colors.black,
                             decoration: TextDecoration.underline,
                           ),
                     ),
@@ -759,7 +766,6 @@ class _EventCalendarState extends State<EventCalendar> {
   }
 
   Future<void> _showAnotherDialog(BuildContext context) async {
-    final parentContext = context;
     final TextEditingController codeController = TextEditingController();
     final theme = Theme.of(context);
 
@@ -948,7 +954,8 @@ class _EventCalendarState extends State<EventCalendar> {
         );
       }
     } catch (error) {
-      print('Errore durante la richiesta: $error');
+      _showFeedbackMessage('Errore di connessione durante l\'eliminazione',
+          isError: true);
     }
   }
 
@@ -1282,7 +1289,8 @@ class _EventCalendarState extends State<EventCalendar> {
         return "NO";
       }
     } catch (error) {
-      print('Errore durante la creazione dell\'evento: $error');
+      _showFeedbackMessage('Errore durante la creazione dell\'evento',
+          isError: true);
       return "NO";
     }
   }

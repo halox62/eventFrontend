@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:social_flutter_giorgio/screens/ForgotPasswordPage.dart';
 import 'package:social_flutter_giorgio/screens/HomePage.dart';
 
 import '../auth.dart';
@@ -26,6 +27,7 @@ class _AuthPageState extends State<AuthPage> {
   bool isLogin = true;
   //String host = "10.0.2.2:5000";
   String host = "event-production.up.railway.app";
+  bool _isPasswordVisible = false;
 
   final ImagePicker _picker = ImagePicker();
 
@@ -77,13 +79,12 @@ class _AuthPageState extends State<AuthPage> {
       if (response.statusCode == 200) {
         await response.stream.bytesToString();
         SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString('userEmail', _email.text);
+        await prefs.setString('email', _email.text);
 
         User? user = FirebaseAuth.instance.currentUser;
         String? token = await user?.getIdToken();
 
         prefs = await SharedPreferences.getInstance();
-        await prefs.setString('userEmail', _email.text);
 
         await prefs.setString('jwtToken', token!);
         Navigator.pushReplacement(
@@ -92,7 +93,10 @@ class _AuthPageState extends State<AuthPage> {
         );
       }
     } catch (e) {
-      log('Errore: $e');
+      String message = "Wrong Credentials";
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
     }
   }
 
@@ -244,9 +248,36 @@ class _AuthPageState extends State<AuthPage> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _password,
-                    obscureText: true,
-                    decoration:
-                        _buildInputDecoration('Password', Icons.lock_outline),
+                    obscureText: !_isPasswordVisible,
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      prefixIcon: Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _isPasswordVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _isPasswordVisible = !_isPasswordVisible;
+                          });
+                        },
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      filled: true,
+                      fillColor: Colors.transparent,
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'La password non può essere vuota';
+                      } else if (value.length < 8) {
+                        return 'La password deve contenere almeno 8 caratteri';
+                      }
+                      return null; // Nessun errore
+                    },
                     style: const TextStyle(color: Colors.white),
                   ),
                   if (!isLogin) ...[
@@ -282,23 +313,39 @@ class _AuthPageState extends State<AuthPage> {
                         ),
                       ),
                   ],
-                  const SizedBox(height: 32),
-                  ElevatedButton(
-                    onPressed: () => isLogin ? signIn() : createUser(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2196F3),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 0,
+                  if (isLogin) ...[
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => ForgotPasswordPage()),
+                        );
+                      },
+                      child: Text('Password dimenticata?'),
                     ),
-                    child: Text(
-                      isLogin ? 'Sign In' : 'Create Account',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                  ],
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: 400,
+                    height: 60,
+                    child: ElevatedButton(
+                      onPressed: () => isLogin ? signIn() : createUser(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2196F3),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        isLogin ? 'Sign In' : 'Create Account',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
