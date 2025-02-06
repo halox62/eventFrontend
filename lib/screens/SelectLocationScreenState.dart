@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
@@ -14,61 +15,105 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
   GoogleMapController? _controller;
   LatLng? selectedLocation;
   LatLng? currentLocation;
-  //String host = "127.0.0.1:5000";
-  String host = "10.0.2.2:5000";
 
   @override
   void initState() {
     super.initState();
-    _getCurrentLocation();
+    _checkLocationPermissionAndGetLocation();
   }
 
-  Future<void> _getCurrentLocation() async {
+  Future<void> _checkLocationPermissionAndGetLocation() async {
     var status = await Permission.location.status;
 
     if (status.isDenied) {
       status = await Permission.location.request();
-      if (status.isDenied) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Permessi per la posizione negati.')),
-        );
-        return;
-      }
     }
 
-    if (status.isPermanentlyDenied) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(
-              'I permessi per la posizione sono disabilitati. Abilitali nelle impostazioni.'),
-          action: SnackBarAction(
-            label: 'Impostazioni',
-            onPressed: () {
-              openAppSettings();
-            },
-          ),
-        ),
-      );
+    if (status.isDenied) {
+      _showPermissionDeniedDialog();
       return;
     }
 
+    if (status.isPermanentlyDenied) {
+      _showPermanentDeniedDialog();
+      return;
+    }
+
+    _getCurrentLocation();
+  }
+
+  void _showPermissionDeniedDialog() {
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('Permessi Localizzazione'),
+        content: const Text(
+            'Abbiamo bisogno dei permessi di localizzazione per continuare'),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('OK'),
+            onPressed: () => Navigator.of(context).pop(),
+          )
+        ],
+      ),
+    );
+  }
+
+  void _showPermanentDeniedDialog() {
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('Permessi Disabilitati'),
+        content: const Text(
+            'Per favore, abilita i permessi di localizzazione nelle impostazioni'),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('Impostazioni'),
+            onPressed: () {
+              Navigator.of(context).pop();
+              openAppSettings();
+            },
+          ),
+          CupertinoDialogAction(
+            child: const Text('Annulla'),
+            onPressed: () => Navigator.of(context).pop(),
+          )
+        ],
+      ),
+    );
+  }
+
+  Future<void> _getCurrentLocation() async {
     try {
       Position position = await Geolocator.getCurrentPosition(
-          // ignore: deprecated_member_use
-          desiredAccuracy: LocationAccuracy.high);
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
+      );
 
       setState(() {
         currentLocation = LatLng(position.latitude, position.longitude);
       });
 
-      if (_controller != null) {
-        _controller!.animateCamera(CameraUpdate.newLatLng(currentLocation!));
-      }
+      _controller?.animateCamera(CameraUpdate.newLatLng(currentLocation!));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Errore nell\'ottenere la posizione: $e')),
-      );
+      _showLocationErrorDialog(e.toString());
     }
+  }
+
+  void _showLocationErrorDialog(String error) {
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('Errore Posizione'),
+        content: Text('Impossibile ottenere la posizione: $error'),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('OK'),
+            onPressed: () => Navigator.of(context).pop(),
+          )
+        ],
+      ),
+    );
   }
 
   void _onMapCreated(GoogleMapController controller) {
@@ -81,25 +126,41 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Mappa')),
-      body: currentLocation == null
-          ? const Center(child: CircularProgressIndicator())
-          : GoogleMap(
-              onMapCreated: _onMapCreated,
-              initialCameraPosition: CameraPosition(
-                target: currentLocation!,
-                zoom: 12.0,
+      appBar: AppBar(title: const Text('Seleziona Posizione')),
+      body: Stack(
+        children: [
+          currentLocation == null
+              ? const Center(child: CupertinoActivityIndicator())
+              : GoogleMap(
+                  onMapCreated: _onMapCreated,
+                  initialCameraPosition: CameraPosition(
+                    target: currentLocation!,
+                    zoom: 12.0,
+                  ),
+                  markers: _createMarkers(),
+                  onTap: (LatLng location) {
+                    setState(() {
+                      selectedLocation = location;
+                    });
+                    Future.delayed(const Duration(milliseconds: 500), () {
+                      Navigator.pop(context, location);
+                    });
+                  },
+                ),
+          if (currentLocation == null)
+            Positioned(
+              bottom: 50,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Text(
+                  'Caricamento posizione...',
+                  style: CupertinoTheme.of(context).textTheme.textStyle,
+                ),
               ),
-              markers: _createMarkers(),
-              onTap: (LatLng location) {
-                setState(() {
-                  selectedLocation = location;
-                });
-                Future.delayed(const Duration(milliseconds: 500), () {
-                  Navigator.pop(context, location);
-                });
-              },
             ),
+        ],
+      ),
     );
   }
 

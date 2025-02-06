@@ -140,12 +140,12 @@ class _HomepageState extends State<Homepage> {
       showLoadingDialog("Loading");
       await fetchProfileData();
       await fetchImages();
-      Navigator.of(_dialogContext).pop();
     } else {
       setState(() {
         isLoading = false;
       });
     }
+    Navigator.of(_dialogContext).pop();
   }
 
   Future<void> signOut() async {

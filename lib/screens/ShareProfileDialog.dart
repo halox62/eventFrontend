@@ -10,7 +10,7 @@ class ShareProfileDialog extends StatelessWidget {
 
   String? get profileUrl {
     if (email == null) return null;
-    return 'https://$host/profile_Page?email=$email';
+    return 'https://$host/profilePage?email=$email';
   }
 
   void _copyToClipboard(BuildContext context) {

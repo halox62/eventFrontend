@@ -420,14 +420,8 @@ class _EventCalendarState extends State<EventCalendar> {
                                             ),
                                             _buildInfoRow(
                                               context,
-                                              Icons.event_available,
-                                              'Data Fine',
-                                              event['endDate'] ?? 'N/A',
-                                            ),
-                                            _buildInfoRow(
-                                              context,
                                               Icons.access_time,
-                                              'Ora Fine',
+                                              'Ora Inizio',
                                               event['endTime'] ?? 'N/A',
                                             ),
                                             const SizedBox(height: 16),

@@ -1,6 +1,4 @@
-import 'dart:developer';
 import 'dart:io';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
@@ -9,7 +7,6 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:social_flutter_giorgio/screens/ForgotPasswordPage.dart';
 import 'package:social_flutter_giorgio/screens/HomePage.dart';
-
 import '../auth.dart';
 
 class AuthPage extends StatefulWidget {
@@ -20,333 +17,345 @@ class AuthPage extends StatefulWidget {
 }
 
 class _AuthPageState extends State<AuthPage> {
+  final _formKey = GlobalKey<FormState>();
   final TextEditingController _email = TextEditingController();
   final TextEditingController _password = TextEditingController();
   final TextEditingController _userName = TextEditingController();
-  File? _profileImage;
-  bool isLogin = true;
-  //String host = "10.0.2.2:5000";
-  String host = "event-production.up.railway.app";
-  bool _isPasswordVisible = false;
-
   final ImagePicker _picker = ImagePicker();
 
+  File? _profileImage;
+  bool isLogin = true;
+  bool _isPasswordVisible = false;
+  String host = "event-production.up.railway.app";
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _email.dispose();
+    _password.dispose();
+    _userName.dispose();
+    super.dispose();
+  }
+
   Future<void> signIn() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
     try {
       await Auth().signInWithEmailAndPassword(
-          email: _email.text, password: _password.text);
+        email: _email.text,
+        password: _password.text,
+      );
 
       User? user = FirebaseAuth.instance.currentUser;
       String? token = await user?.getIdToken();
 
-      SharedPreferences prefs = await SharedPreferences.getInstance();
+      final prefs = await SharedPreferences.getInstance();
       await prefs.setString('jwtToken', token!);
       await prefs.setString('email', _email.text);
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const Homepage()),
-      );
-    } on FirebaseAuthException catch (error) {
-      String message = "Wrong Credentials";
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
-      print('Error: ${error.message}');
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const Homepage()),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.message ?? 'Authentication failed'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> createUser() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
     try {
       await Auth().createUserWithEmailAndPassword(
-          email: _email.text, password: _password.text);
+        email: _email.text,
+        password: _password.text,
+      );
 
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('https://' + host + '/register'),
+        Uri.parse('https://$host/register'),
       );
 
       request.fields['email'] = _email.text;
       request.fields['userName'] = _userName.text;
 
       if (_profileImage != null) {
-        request.files.add(await http.MultipartFile.fromPath(
-          'profileImage',
-          _profileImage!.path,
-        ));
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'profileImage',
+            _profileImage!.path,
+          ),
+        );
       }
-      var response = await request.send();
+
+      final response = await request.send();
 
       if (response.statusCode == 200) {
         await response.stream.bytesToString();
-        SharedPreferences prefs = await SharedPreferences.getInstance();
+
+        final prefs = await SharedPreferences.getInstance();
         await prefs.setString('email', _email.text);
 
         User? user = FirebaseAuth.instance.currentUser;
         String? token = await user?.getIdToken();
-
-        prefs = await SharedPreferences.getInstance();
-
         await prefs.setString('jwtToken', token!);
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const Homepage()),
-        );
+
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const Homepage()),
+          );
+        }
+      } else {
+        throw Exception('Registration failed');
       }
     } catch (e) {
-      String message = "Wrong Credentials";
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Registration failed. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // Metodo per selezionare un'immagine dalla galleria o scattarla
   Future<void> _pickImage(ImageSource source) async {
     final pickedFile = await _picker.pickImage(source: source);
-
     if (pickedFile != null) {
-      setState(() {
-        _profileImage = File(pickedFile.path);
-      });
+      setState(() => _profileImage = File(pickedFile.path));
     }
   }
 
-  // Metodo per caricare l'immagine su Firebase Storage
-  Future<String> _uploadImageToFirebase(File imageFile) async {
-    try {
-      FirebaseStorage storage = FirebaseStorage.instance;
-      String fileName = 'profile_images/${_email.text}.png';
-      Reference ref = storage.ref().child(fileName);
-      UploadTask uploadTask = ref.putFile(imageFile);
-      TaskSnapshot snapshot = await uploadTask;
-      return await snapshot.ref.getDownloadURL();
-    } catch (e) {
-      print('Errore nel caricamento dell\'immagine: $e');
-      return '';
-    }
-  }
-
-  // Metodo per aprire un bottom sheet e scegliere se scattare o selezionare un'immagine
   void _showPicker(BuildContext context) {
     showModalBottomSheet(
-        context: context,
-        builder: (BuildContext bc) {
-          return SafeArea(
-            child: Wrap(
-              children: <Widget>[
-                ListTile(
-                  leading: const Icon(Icons.photo_library),
-                  title: const Text('Galleria'),
-                  onTap: () {
-                    _pickImage(ImageSource.gallery);
-                    Navigator.of(context).pop();
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.photo_camera),
-                  title: const Text('Fotocamera'),
-                  onTap: () {
-                    _pickImage(ImageSource.camera);
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ],
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: Colors.black87),
+              title: const Text('Gallery',
+                  style: TextStyle(color: Colors.black87)),
+              onTap: () {
+                _pickImage(ImageSource.gallery);
+                Navigator.pop(context);
+              },
             ),
-          );
-        });
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: Colors.black87),
+              title:
+                  const Text('Camera', style: TextStyle(color: Colors.black87)),
+              onTap: () {
+                _pickImage(ImageSource.camera);
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF1A1A1A), Color(0xFF0D0D0D)],
-          ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
+            child: Form(
+              key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Welcome',
-                    style: TextStyle(
+                  Text(
+                    isLogin ? 'Welcome Back' : 'Create Account',
+                    style: const TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: -1,
+                      color: Colors.black,
+                      letterSpacing: -0.5,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   Text(
-                    isLogin ? 'Sign in to continue' : 'Create your account',
+                    isLogin
+                        ? 'Sign in to continue'
+                        : 'Create your account to get started',
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.white.withOpacity(0.7),
-                      letterSpacing: -0.2,
+                      color: Colors.black.withOpacity(0.7),
+                      height: 1.5,
                     ),
                   ),
-                  const SizedBox(height: 48),
-                  if (!isLogin && _profileImage != null)
-                    Center(
-                      child: Stack(
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
-                                  blurRadius: 20,
-                                  offset: const Offset(0, 10),
-                                ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(60),
-                              child: Image.file(
-                                _profileImage!,
-                                height: 120,
-                                width: 120,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            right: 0,
-                            bottom: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF2196F3),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.edit,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  const SizedBox(height: 32),
-                  TextFormField(
-                    controller: _email,
-                    decoration:
-                        _buildInputDecoration('Email', Icons.email_outlined),
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _password,
-                    obscureText: !_isPasswordVisible,
-                    decoration: InputDecoration(
-                      labelText: 'Password',
-                      prefixIcon: Icon(Icons.lock_outline),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _isPasswordVisible
-                              ? Icons.visibility
-                              : Icons.visibility_off,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _isPasswordVisible = !_isPasswordVisible;
-                          });
-                        },
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      filled: true,
-                      fillColor: Colors.transparent,
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'La password non può essere vuota';
-                      } else if (value.length < 8) {
-                        return 'La password deve contenere almeno 8 caratteri';
-                      }
-                      return null; // Nessun errore
-                    },
-                    style: const TextStyle(color: Colors.white),
-                  ),
+                  const SizedBox(height: 40),
                   if (!isLogin) ...[
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _userName,
-                      decoration: _buildInputDecoration(
-                          'Username', Icons.person_outline),
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                    const SizedBox(height: 24),
-                    if (_profileImage == null)
-                      OutlinedButton(
-                        onPressed: () => _showPicker(context),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Color(0xFF2196F3)),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                    Center(
+                      child: GestureDetector(
+                        onTap: () => _showPicker(context),
+                        child: Stack(
                           children: [
-                            Icon(Icons.add_photo_alternate_outlined,
-                                color: Color(0xFF2196F3)),
-                            SizedBox(width: 8),
-                            Text(
-                              'Add Profile Photo',
-                              style: TextStyle(color: Color(0xFF2196F3)),
+                            Container(
+                              height: 120,
+                              width: 120,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.black.withOpacity(0.1),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 10),
+                                  ),
+                                ],
+                              ),
+                              child: _profileImage != null
+                                  ? ClipRRect(
+                                      borderRadius: BorderRadius.circular(60),
+                                      child: Image.file(
+                                        _profileImage!,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.person_outline,
+                                      size: 50,
+                                      color: Colors.black54,
+                                    ),
+                            ),
+                            Positioned(
+                              right: 0,
+                              bottom: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF2196F3),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.edit,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
                             ),
                           ],
                         ),
                       ),
+                    ),
+                    const SizedBox(height: 32),
+                  ],
+                  _buildTextField(
+                    controller: _email,
+                    label: 'Email',
+                    icon: Icons.email_outlined,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Email is required';
+                      }
+                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                          .hasMatch(value)) {
+                        return 'Please enter a valid email';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  _buildPasswordField(),
+                  if (!isLogin) ...[
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      controller: _userName,
+                      label: 'Username',
+                      icon: Icons.person_outline,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Username is required';
+                        }
+                        return null;
+                      },
+                    ),
                   ],
                   if (isLogin) ...[
-                    TextButton(
-                      onPressed: () {
-                        Navigator.push(
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => ForgotPasswordPage()),
-                        );
-                      },
-                      child: Text('Password dimenticata?'),
+                            builder: (context) => ForgotPasswordPage(),
+                          ),
+                        ),
+                        child: const Text(
+                          'Forgot Password?',
+                          style: TextStyle(
+                            color: Color(0xFF2196F3),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                   const SizedBox(height: 32),
                   SizedBox(
-                    width: 400,
-                    height: 60,
+                    width: double.infinity,
+                    height: 56,
                     child: ElevatedButton(
-                      onPressed: () => isLogin ? signIn() : createUser(),
+                      onPressed: _isLoading
+                          ? null
+                          : () => isLogin ? signIn() : createUser(),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF2196F3),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        disabledBackgroundColor: Colors.blue.withOpacity(0.3),
+                        elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        elevation: 0,
                       ),
-                      child: Text(
-                        isLogin ? 'Sign In' : 'Create Account',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Text(
+                              isLogin ? 'Sign In' : 'Create Account',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -355,15 +364,27 @@ class _AuthPageState extends State<AuthPage> {
                       onPressed: () {
                         setState(() {
                           isLogin = !isLogin;
+                          _formKey.currentState?.reset();
                         });
                       },
-                      child: Text(
-                        isLogin
-                            ? 'Don t have an account? Sign up'
-                            : 'Already have an account? Sign in',
-                        style: const TextStyle(
-                          color: Color(0xFF2196F3),
-                          fontSize: 14,
+                      child: Text.rich(
+                        TextSpan(
+                          text: isLogin
+                              ? 'Don\'t have an account? '
+                              : 'Already have an account? ',
+                          style: TextStyle(
+                            color: Colors.black.withOpacity(0.7),
+                            fontSize: 14,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: isLogin ? 'Sign up' : 'Sign in',
+                              style: const TextStyle(
+                                color: Color(0xFF2196F3),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -377,22 +398,90 @@ class _AuthPageState extends State<AuthPage> {
     );
   }
 
-  InputDecoration _buildInputDecoration(String label, IconData icon) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
-      prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.7)),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      validator: validator,
+      style: const TextStyle(color: Colors.black),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: Colors.black.withOpacity(0.7)),
+        prefixIcon: Icon(icon, color: Colors.black54),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.black.withOpacity(0.2)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF2196F3)),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.red),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.red),
+        ),
+        filled: true,
+        fillColor: Colors.grey.withOpacity(0.05),
       ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF2196F3)),
+    );
+  }
+
+  Widget _buildPasswordField() {
+    return TextFormField(
+      controller: _password,
+      obscureText: !_isPasswordVisible,
+      style: const TextStyle(color: Colors.black),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Password is required';
+        }
+        if (value.length < 8) {
+          return 'Password must be at least 8 characters';
+        }
+        return null;
+      },
+      decoration: InputDecoration(
+        labelText: 'Password',
+        labelStyle: TextStyle(color: Colors.black.withOpacity(0.7)),
+        prefixIcon: Icon(
+          Icons.lock_outline,
+          color: Colors.black54,
+        ),
+        suffixIcon: IconButton(
+          icon: Icon(
+            _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+            color: Colors.black54,
+          ),
+          onPressed: () =>
+              setState(() => _isPasswordVisible = !_isPasswordVisible),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.black.withOpacity(0.2)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF2196F3)),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.red),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.red),
+        ),
+        filled: true,
+        fillColor: Colors.grey.withOpacity(0.05),
       ),
-      filled: true,
-      fillColor: Colors.white.withOpacity(0.05),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     );
   }
 }
