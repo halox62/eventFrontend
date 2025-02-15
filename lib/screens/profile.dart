@@ -70,13 +70,16 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> fetchProfileData(String userEmail) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     token = prefs.getString('jwtToken');
+    if (token == null) {
+      throw Exception('Token not found');
+    }
     try {
       final headers = {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       };
       final response = await http.post(
-        Uri.parse('https://' + host + '/profile'),
+        Uri.parse('https://$host/profileS'),
         headers: headers,
         body: jsonEncode({
           'email': userEmail,
@@ -108,7 +111,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> fetchImages(String email) async {
-    final url = Uri.parse('https://' + host + '/getImage');
+    final url = Uri.parse('https://$host/getImageS');
     final headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',

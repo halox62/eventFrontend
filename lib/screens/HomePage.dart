@@ -135,16 +135,27 @@ class _HomepageState extends State<Homepage> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     token = prefs.getString('jwtToken');
     userEmail = prefs.getString('email');
-
-    if (token != null) {
+    try {
       showLoadingDialog("Loading");
-      await fetchProfileData();
-      await fetchImages();
-    } else {
-      setState(() {
-        isLoading = false;
-      });
+      if (token != null) {
+        await fetchProfileData();
+        await fetchImages();
+      } else {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Errore durante l\'aggiornamento'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
+
     Navigator.of(_dialogContext).pop();
   }
 
@@ -157,7 +168,7 @@ class _HomepageState extends State<Homepage> {
   }
 
   Future<void> _fetchEventCoordinates(String code) async {
-    final url = Uri.parse('https://' + host + '/get_coordinate');
+    final url = Uri.parse('https://$host/get_coordinate');
     final headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
@@ -232,7 +243,7 @@ class _HomepageState extends State<Homepage> {
   Future<void> uploadImage(File imageFile) async {
     var request = http.MultipartRequest(
       'POST',
-      Uri.parse('https://' + host + '/upload'),
+      Uri.parse('https://$host/upload'),
     );
     final headers = {
       'Content-Type': 'application/json',
@@ -259,8 +270,7 @@ class _HomepageState extends State<Homepage> {
       'Authorization': 'Bearer $token',
     };
     try {
-      final response = await http.get(
-          Uri.parse('https://' + host + '/getEventCode'),
+      final response = await http.get(Uri.parse('https://$host/getEventCode'),
           headers: headers);
 
       if (response.statusCode == 200) {
@@ -277,54 +287,50 @@ class _HomepageState extends State<Homepage> {
     return null;
   }
 
-  Future<void> uploadImageForEvent(String eventCode) async {
-    String message;
-    await _fetchEventCoordinates(eventCode);
+  Future<void> uploadImageForEvent(String eventCode, String eventName) async {
+    String message = "Errore caricamento";
+    double latitudine;
+    double longitudine;
+
     PermissionStatus permission = await Permission.location.request();
 
     if (permission.isGranted) {
-      // Il permesso è stato concesso
-      // Ottieni la posizione corrente del dispositivo
       Position currentPosition = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high);
 
-      // Calcola la distanza tra la posizione corrente e quella dell'evento
-      double distance = Geolocator.distanceBetween(
-        currentPosition.latitude,
-        currentPosition.longitude,
-        eventLatitude!,
-        eventLongitude!,
-      );
+      latitudine = currentPosition.latitude;
+      longitudine = currentPosition.longitude;
 
-      if (distance <= 1000) {
-        message = 'Posizione ok';
-        if (_capturedImage != null) {
-          final headers = {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $token',
-          };
-          var request = http.MultipartRequest(
-            'POST',
-            Uri.parse('https://' + host + '/uploadEventImage'),
-          );
-          request.headers.addAll(headers);
+      if (_capturedImage != null) {
+        final headers = {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        };
+        var request = http.MultipartRequest(
+          'POST',
+          Uri.parse('https://$host/uploadEventImage'),
+        );
+        request.headers.addAll(headers);
 
-          request.fields['eventCode'] = eventCode;
-          request.files.add(await http.MultipartFile.fromPath(
-            'image',
-            _capturedImage!.path,
-          ));
+        request.fields['eventCode'] = eventCode;
+        request.fields['latitudine'] = latitudine.toString();
+        request.fields['longitudine'] = longitudine.toString();
+        request.files.add(await http.MultipartFile.fromPath(
+          'image',
+          _capturedImage!.path,
+        ));
 
-          var response = await request.send();
+        var response = await request.send();
 
-          if (response.statusCode == 200) {
-            await _initializeData();
-          } else {
-            _checkTokenValidity(response.statusCode);
+        if (response.statusCode == 200) {
+          await _initializeData();
+          message = 'Foto caricata per l\'evento $eventName';
+        } else {
+          _checkTokenValidity(response.statusCode);
+          if (response.statusCode == 403) {
+            message = "Foto non caricata sei troppo lontano dall'evento";
           }
         }
-      } else {
-        message = 'Sei troppo lontano dall\'evento';
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -339,7 +345,7 @@ class _HomepageState extends State<Homepage> {
   Future<String> getEventName(String eventCode) async {
     try {
       final response = await http.post(
-        Uri.parse('https://' + host + '/nameByCode'),
+        Uri.parse('https://$host/nameByCode'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token'
@@ -415,21 +421,11 @@ class _HomepageState extends State<Homepage> {
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(12),
                                     onTap: () async {
-                                      await uploadImageForEvent(events[i]);
+                                      showLoadingDialog("Loading");
+                                      await uploadImageForEvent(
+                                          events[i], eventName);
                                       Navigator.of(context).pop();
-                                      ScaffoldMessenger.of(rootContext)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Foto caricata per l\'evento $eventName',
-                                          ),
-                                          behavior: SnackBarBehavior.floating,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(10),
-                                          ),
-                                        ),
-                                      );
+                                      Navigator.of(_dialogContext).pop();
                                     },
                                     child: Padding(
                                       padding: const EdgeInsets.all(16),
@@ -511,158 +507,199 @@ class _HomepageState extends State<Homepage> {
     );
   }
 
-  void _showUploadSuccess(BuildContext context, bool withEvent) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        width: 300,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        content: Row(
-          children: [
-            const Icon(
-              Icons.check_circle_outline,
-              color: Colors.white,
-            ),
-            const SizedBox(width: 12),
-            Text(
-              withEvent
-                  ? 'Foto caricata nell\'evento'
-                  : 'Foto caricata con successo',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
+  Widget _buildButton(String text,
+      {bool outlined = false, required void Function() onPressed}) {
+    return outlined
+        ? OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
-          ],
-        ),
+            onPressed: onPressed,
+            child: Text(text, style: const TextStyle(fontSize: 16)),
+          )
+        : FilledButton(
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: onPressed,
+            child: Text(text, style: const TextStyle(fontSize: 16)),
+          );
+  }
+
+  void _showUploadSuccess(BuildContext context, bool withEvent) {
+    // Ensure we're using a valid context by scheduling the SnackBar for the next frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (context.mounted) {
+        // Check if the context is still valid
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            width: 300,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            content: Row(
+              children: [
+                const Icon(
+                  Icons.check_circle_outline,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  withEvent
+                      ? 'Foto caricata nell\'evento con successo!'
+                      : 'Foto caricata con successo',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    });
+  }
+
+  void _showEventSelectionDialog(List<dynamic> events, File image) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        // Use separate context for dialog
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(dialogContext).size.width * 0.9,
+              maxHeight: MediaQuery.of(dialogContext).size.height * 0.8,
+            ),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Carica foto',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Sei iscritto a degli eventi. Vuoi caricare la foto in uno di essi?',
+                      style: TextStyle(
+                        fontSize: 16,
+                        height: 1.5,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    AspectRatio(
+                      aspectRatio: 16 / 9,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.file(
+                          image,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    _buildButton(
+                      "Scegli evento",
+                      onPressed: () async {
+                        Navigator.of(dialogContext).pop();
+                        showEventsDialog(events);
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    _buildButton(
+                      "Carica senza evento",
+                      outlined: true,
+                      onPressed: () async {
+                        Navigator.of(dialogContext).pop();
+                        await uploadImage(image);
+                        if (context.mounted) {
+                          // Check if the original context is still valid
+                          _showUploadSuccess(context, false);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _uploadImageWithoutEvent(File image) async {
+    showLoadingDialog("Caricamento foto...");
+    await uploadImage(image);
+    Navigator.of(_dialogContext).pop();
+    if (context.mounted) {
+      _showUploadSuccess(context, false);
+    }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Errore'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
       ),
     );
   }
 
   void onTabTapped() async {
-    var index = 1;
-    if (index == 1) {
-      showLoadingDialog("Open Fotocamera");
+    try {
+      showLoadingDialog("Apertura fotocamera...");
       final image = await takePicture();
       Navigator.of(_dialogContext).pop();
+
       if (image != null) {
         setState(() {
           _capturedImage = image;
         });
-        showLoadingDialog("Search Event");
+
+        showLoadingDialog("Verifica eventi...");
         final isEnrolledInEvents = await checkUserEvents();
         Navigator.of(_dialogContext).pop();
 
-        if (isEnrolledInEvents != null) {
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return Dialog(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28),
-                ),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: MediaQuery.of(context).size.width * 0.9,
-                    maxHeight: MediaQuery.of(context).size.height * 0.8,
-                  ),
-                  child: SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Carica foto',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'Sei iscritto a degli eventi. Vuoi caricare la foto in uno di essi?',
-                            style: TextStyle(
-                              fontSize: 16,
-                              height: 1.5,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          // Preview dell'immagine con dimensioni esplicite
-                          AspectRatio(
-                            aspectRatio: 16 / 9,
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.file(
-                                image,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          // Bottoni
-                          FilledButton(
-                            style: FilledButton.styleFrom(
-                              minimumSize: const Size.fromHeight(48),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            onPressed: () async {
-                              Navigator.of(context).pop();
-                              showEventsDialog(isEnrolledInEvents);
-                            },
-                            child: const Text(
-                              'Scegli evento',
-                              style: TextStyle(fontSize: 16),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          OutlinedButton(
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size.fromHeight(48),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            onPressed: () async {
-                              await uploadImage(image);
-                              Navigator.of(context).pop();
-                              _showUploadSuccess(context, false);
-                            },
-                            child: const Text(
-                              'Carica senza evento',
-                              style: TextStyle(fontSize: 16),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          );
+        if (isEnrolledInEvents != null && isEnrolledInEvents.isNotEmpty) {
+          // Mostra la dialog per scegliere l'evento
+          _showEventSelectionDialog(isEnrolledInEvents, image);
         } else {
-          showLoadingDialog("Caricamento Foto");
-          await uploadImage(image);
-          Navigator.of(_dialogContext).pop();
-          _showUploadSuccess(context, false);
+          // Carica l'immagine senza evento
+          _uploadImageWithoutEvent(image);
         }
       }
+    } catch (e) {
+      Navigator.of(_dialogContext).pop(); // Chiude eventuali dialog attivi
+      _showErrorDialog("Si è verificato un errore: $e");
     }
-
-    /*if (index == 2) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const ProfilePage()),
-      );
-    }*/
   }
 
   Future<void> fetchImages() async {
@@ -670,7 +707,7 @@ class _HomepageState extends State<Homepage> {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
     };
-    final url = Uri.parse('https://' + host + '/getImage');
+    final url = Uri.parse('https://$host/getImage');
 
     try {
       final response = await http.post(url, headers: headers);
@@ -695,8 +732,8 @@ class _HomepageState extends State<Homepage> {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       };
-      final response = await http
-          .post(Uri.parse('https://' + host + '/profile'), headers: headers);
+      final response =
+          await http.post(Uri.parse('https://$host/profile'), headers: headers);
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
@@ -727,7 +764,7 @@ class _HomepageState extends State<Homepage> {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
     };
-    final url = Uri.parse('https://' + host + '/delete_photo_by_url');
+    final url = Uri.parse('https://$host/delete_photo_by_url');
     try {
       final response = await http.post(
         url,
@@ -762,7 +799,7 @@ class _HomepageState extends State<Homepage> {
   }
 
   Future<void> searchProfiles(String query) async {
-    String apiUrl = "https://" + host + "/search_profiles";
+    String apiUrl = "https://$host/search_profiles";
 
     try {
       final response = await http.post(
@@ -880,14 +917,14 @@ class _HomepageState extends State<Homepage> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: colorScheme.background,
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
         elevation: 0,
         backgroundColor: colorScheme.surface,
         surfaceTintColor: Colors.transparent,
         title: Container(
           decoration: BoxDecoration(
-            color: colorScheme.surfaceVariant.withOpacity(0.3),
+            color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
             borderRadius: BorderRadius.circular(12),
           ),
           child: TextField(
@@ -998,7 +1035,7 @@ class _HomepageState extends State<Homepage> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          await _handleRefresh();
+          _handleRefresh();
           setState(() {
             enlargedImageIndex = null;
             isImageEnlarged = false;
@@ -1032,7 +1069,8 @@ class _HomepageState extends State<Homepage> {
                                 ),
                                 child: CircleAvatar(
                                   radius: 40,
-                                  backgroundColor: colorScheme.surfaceVariant,
+                                  backgroundColor:
+                                      colorScheme.surfaceContainerHighest,
                                   backgroundImage: profileImageUrl != null
                                       ? NetworkImage(profileImageUrl!)
                                       : null,
@@ -1075,8 +1113,7 @@ class _HomepageState extends State<Homepage> {
                                           .textTheme
                                           .labelLarge
                                           ?.copyWith(
-                                            color:
-                                                colorScheme.onPrimaryContainer,
+                                            color: Colors.black,
                                             fontWeight: FontWeight.w500,
                                           ),
                                     ),
@@ -1114,7 +1151,8 @@ class _HomepageState extends State<Homepage> {
                                           _handleImageLongPress(index),
                                       child: Container(
                                         decoration: BoxDecoration(
-                                          color: colorScheme.surfaceVariant,
+                                          color: colorScheme
+                                              .surfaceContainerHighest,
                                           borderRadius:
                                               BorderRadius.circular(16),
                                         ),
@@ -1181,16 +1219,6 @@ class _HomepageState extends State<Homepage> {
                                     ),
                               ),
                               const SizedBox(height: 8),
-                              Text(
-                                'Inizia a catturare un outfit accattivante, scala le classifiche',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(
-                                      color: colorScheme.onSurfaceVariant
-                                          .withOpacity(0.7),
-                                    ),
-                              ),
                             ],
                           ),
                         ),

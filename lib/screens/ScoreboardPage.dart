@@ -71,8 +71,7 @@ class _ScoreboardPageState extends State<ScoreboardPage> {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       };
-      final response = await http.get(
-          Uri.parse('https://' + host + '/get_scoreboard'),
+      final response = await http.get(Uri.parse('https://$host/get_scoreboard'),
           headers: headers);
 
       if (response.statusCode == 200) {

@@ -31,6 +31,8 @@ Future<void> resetPassword(String email, BuildContext context) async {
 }
 
 class ForgotPasswordPage extends StatefulWidget {
+  const ForgotPasswordPage({Key? key}) : super(key: key);
+
   @override
   _ForgotPasswordPageState createState() => _ForgotPasswordPageState();
 }

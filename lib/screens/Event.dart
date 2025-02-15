@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-//import 'package:share_plus/share_plus.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -88,8 +88,8 @@ class _EventCalendarState extends State<EventCalendar> {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         };
-        final response = await http
-            .get(Uri.parse('https://' + host + '/creator'), headers: headers);
+        final response = await http.get(Uri.parse('https://$host/creator'),
+            headers: headers);
 
         if (response.statusCode == 200) {
           return true;
@@ -202,7 +202,7 @@ class _EventCalendarState extends State<EventCalendar> {
           'Authorization': 'Bearer $token',
         };
         final response = await http.get(
-            Uri.parse('https://' + host + '/createGetEventDates'),
+            Uri.parse('https://$host/createGetEventDates'),
             headers: headers);
 
         if (response.statusCode == 200) {
@@ -230,7 +230,7 @@ class _EventCalendarState extends State<EventCalendar> {
         'Authorization': 'Bearer $token',
       };
       final response = await http.get(
-          Uri.parse('https://' + host + '/subscribeGetEventDates'),
+          Uri.parse('https://$host/subscribeGetEventDates'),
           headers: headers);
 
       if (response.statusCode == 200) {
@@ -253,7 +253,7 @@ class _EventCalendarState extends State<EventCalendar> {
     // Formatta la data come yyyy-MM-dd
     String dateOnly = DateFormat('yyyy-MM-dd').format(date);
 
-    final url = Uri.parse('https://' + host + '/events_by_date');
+    final url = Uri.parse('https://$host/events_by_date');
 
     final body = jsonEncode({'date': dateOnly});
 
@@ -583,18 +583,19 @@ class _EventCalendarState extends State<EventCalendar> {
     );
   }
 
-  void _showQRCode1(BuildContext context, String code) {
-    showDialog(
+  Future<void> _showQRCode1(BuildContext context, String code) {
+    return showDialog(
       context: context,
       builder: (context) => Dialog(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Header
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -602,6 +603,7 @@ class _EventCalendarState extends State<EventCalendar> {
                     'QR Code Evento',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: Theme.of(context).colorScheme.onSurface,
+                          fontWeight: FontWeight.bold,
                         ),
                   ),
                   IconButton(
@@ -611,27 +613,146 @@ class _EventCalendarState extends State<EventCalendar> {
                 ],
               ),
               const SizedBox(height: 24),
+
+              // QR Code Container with shadow
               Container(
-                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    child: QrImageView(
+                      data: code,
+                      version: QrVersions.auto,
+                      size: 200.0,
+                      backgroundColor: Colors.white,
+                      errorStateBuilder: (context, error) => Center(
+                        child: Text(
+                          'Errore nella generazione del QR Code',
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.error),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Code display with copy button
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .surfaceContainerHighest
+                      .withOpacity(0.5),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: QrImageView(
-                  data: code,
-                  version: QrVersions.auto,
-                  size: 200.0,
-                  backgroundColor: Colors.white,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      code,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w500,
+                          ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.copy, size: 20),
+                      onPressed: () async {
+                        await Clipboard.setData(ClipboardData(text: code));
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content:
+                                  const Text('Codice copiato negli appunti'),
+                              behavior: SnackBarBehavior.floating,
+                              width: 300,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                      tooltip: 'Copia codice',
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
-              Text(
-                code,
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-              ),
               const SizedBox(height: 24),
+
+              // Action buttons
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  /* FilledButton.icon(
+                    onPressed: () {
+                      // Implement QR code saving functionality
+                    },
+                    style: FilledButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
+                    icon: const Icon(Icons.download, size: 20),
+                    label: const Text(
+                      'Salva QR',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),*/
+                  const SizedBox(width: 16),
+                  FilledButton.icon(
+                    onPressed: () async {
+                      await Share.share(
+                        'Codice evento: $code',
+                        subject: 'QR Code Evento',
+                      );
+                    },
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
+                    icon: const Icon(Icons.share, size: 20),
+                    label: const Text(
+                      'Condividi',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -730,9 +851,9 @@ class _EventCalendarState extends State<EventCalendar> {
                     onPressed: () {
                       _showCreateEventDialog(context);
                     },
-                    child: const Icon(Icons.add),
                     backgroundColor: Colors.amber[800],
                     elevation: 4.0,
+                    child: const Icon(Icons.add),
                   ),
                 ),
               ),
@@ -744,9 +865,9 @@ class _EventCalendarState extends State<EventCalendar> {
                     onPressed: () {
                       _showAnotherDialog(context);
                     },
-                    child: const Icon(Icons.event),
                     backgroundColor: Colors.blue,
                     elevation: 4.0,
+                    child: const Icon(Icons.event),
                   ),
                 ),
               ),
@@ -917,7 +1038,7 @@ class _EventCalendarState extends State<EventCalendar> {
   void addEvent(String code) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('jwtToken');
-    final url = Uri.parse('https://' + host + '/addEvent');
+    final url = Uri.parse('https://$host/addEvent');
     try {
       final headers = {
         'Content-Type': 'application/json',
@@ -1217,7 +1338,7 @@ class _EventCalendarState extends State<EventCalendar> {
 
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('https://' + host + '/createEvent'),
+        Uri.parse('https://$host/createEvent'),
       );
 
       request.headers.addAll(headers);
@@ -1291,9 +1412,11 @@ class _EventCalendarState extends State<EventCalendar> {
 
   void _showQRCode(String eventName, DateTime selectedDate, TimeOfDay timeOfDay,
       LatLng location) async {
+    showLoadingDialog("Creazione evento");
     String data = _generateRandomString(8);
     String res =
         await createEvent(eventName, data, selectedDate, timeOfDay, location);
+    Navigator.of(_dialogContext).pop();
     if (res == "ok") {
       showDialog(
         context: context,
@@ -1321,7 +1444,7 @@ class _EventCalendarState extends State<EventCalendar> {
               TextButton(
                 child: const Text('Condividi'),
                 onPressed: () {
-                  //Share.share(data); // Condividi i dettagli dell'evento
+                  Share.share(data); // Condividi i dettagli dell'evento
                 },
               ),
               TextButton(
@@ -1335,6 +1458,9 @@ class _EventCalendarState extends State<EventCalendar> {
           );
         },
       );
+    } else {
+      _showFeedbackMessage('Errore durante la creazione dell\'evento',
+          isError: true);
     }
   }
 }

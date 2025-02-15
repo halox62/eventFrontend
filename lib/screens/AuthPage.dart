@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
@@ -106,8 +105,6 @@ class _AuthPageState extends State<AuthPage> {
       final response = await request.send();
 
       if (response.statusCode == 200) {
-        await response.stream.bytesToString();
-
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('email', _email.text);
 

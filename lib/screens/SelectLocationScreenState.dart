@@ -23,7 +23,7 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
   }
 
   Future<void> _checkLocationPermissionAndGetLocation() async {
-    var status = await Permission.location.status;
+    var status = await Permission.locationWhenInUse.request();
 
     if (status.isDenied) {
       status = await Permission.location.request();

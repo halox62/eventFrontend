@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
@@ -35,6 +36,10 @@ class EventPage extends State<EventPageControl> {
   String? userName;
   String? point;
   Map<int, String> profileImages = {};
+  BuildContext? _dialogContext;
+  late String endTime;
+  DateTime? eventEndTime;
+  Timer? _countdownTimer;
 
   @override
   void initState() {
@@ -42,21 +47,209 @@ class EventPage extends State<EventPageControl> {
     _initializeEventPhotos();
   }
 
+  void showLoadingDialog(String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        _dialogContext = context;
+        return Dialog(
+          backgroundColor: Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(message),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _initializeEventPhotos() async {
-    await _name();
-    await _loadEventPhotos();
-    await _loadLikePhotos();
-    await _fetchEventCoordinates();
-    await _loadUserProfiles();
+    try {
+      await _name();
+      if (eventEndTime == null) {
+        throw Exception('Event time not initialized');
+      }
+      print(_isEventStarted());
+      if (_isEventStarted()) {
+        _showEventCountdown();
+      } else {
+        showLoadingDialog("Caricamento Eventi");
+        await _loadEventPhotos();
+        await _loadLikePhotos();
+        await _fetchEventCoordinates();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Nessuna informazione disponibile'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      // Always try to dismiss the dialog if it exists
+      if (_dialogContext != null && mounted) {
+        Navigator.of(_dialogContext!).pop();
+      }
+    }
+  }
+
+  bool _isEventStarted() {
+    return DateTime.now()
+        .isBefore(eventEndTime!); // Check if we're BEFORE the end time
+  }
+
+  void _showEventCountdown() {
+    if (eventEndTime == null) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            // 🚀 Ferma il vecchio timer prima di avviarne uno nuovo
+            _countdownTimer?.cancel();
+
+            _countdownTimer =
+                Timer.periodic(const Duration(seconds: 1), (timer) {
+              if (!context.mounted) {
+                timer.cancel();
+                return;
+              }
+
+              setState(() {}); // 🔄 Aggiorna la UI
+
+              final now = DateTime.now();
+              if (now.isAfter(eventEndTime!)) {
+                timer.cancel();
+
+                if (context.mounted && Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                  Future.delayed(const Duration(milliseconds: 100), () {
+                    if (mounted) {
+                      _initializeEventPhotos();
+                    }
+                  });
+                }
+              }
+            });
+
+            final difference = eventEndTime!.difference(DateTime.now());
+            final formattedEndTime =
+                "${eventEndTime!.hour.toString().padLeft(2, '0')}:${eventEndTime!.minute.toString().padLeft(2, '0')}";
+
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      "L'evento non è ancora iniziato",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Inizio evento previsto: $formattedEndTime",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.black87.withOpacity(0.7),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _CountdownUnit(
+                          value: difference.inHours,
+                          unit: "Ore",
+                        ),
+                        _CountdownSeparator(),
+                        _CountdownUnit(
+                          value: difference.inMinutes % 60,
+                          unit: "Minuti",
+                        ),
+                        _CountdownSeparator(),
+                        _CountdownUnit(
+                          value: difference.inSeconds % 60,
+                          unit: "Secondi",
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () {
+                        if (context.mounted) {
+                          Navigator.of(context).pop();
+                        }
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const Homepage(),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black87,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        "Torna alla Home",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    ).then((_) {
+      _countdownTimer
+          ?.cancel(); // ⛔ Ferma il timer quando il dialog viene chiuso
+    });
   }
 
   Future<void> _handleRefresh() async {
     try {
-      await _name();
-      await _loadEventPhotos();
-      await _loadLikePhotos();
-      await _fetchEventCoordinates();
-      await _loadUserProfiles();
+      _initializeEventPhotos();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -103,7 +296,7 @@ class EventPage extends State<EventPageControl> {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
     };
-    final url = Uri.parse('https://' + host + '/nameByCode');
+    final url = Uri.parse('https://$host/nameByCode');
 
     try {
       final body = jsonEncode({
@@ -118,6 +311,15 @@ class EventPage extends State<EventPageControl> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         eventName = data['name'];
+        endTime = data['EndTime'];
+        final timeParts = endTime.split(':');
+        eventEndTime = DateTime(
+          DateTime.now().year,
+          DateTime.now().month,
+          DateTime.now().day,
+          int.parse(timeParts[0]),
+          int.parse(timeParts[1]),
+        );
       } else {
         _checkTokenValidity(response.statusCode);
         throw Exception('Failed to load event coordinates');
@@ -132,7 +334,7 @@ class EventPage extends State<EventPageControl> {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
     };
-    final url = Uri.parse('https://' + host + '/get_coordinate');
+    final url = Uri.parse('https://$host/get_coordinate');
 
     try {
       final body = jsonEncode({
@@ -159,8 +361,8 @@ class EventPage extends State<EventPageControl> {
     }
   }
 
-  Future<String> setPositionTrue(String eventCode) async {
-    final url = Uri.parse('https://' + host + '/set_position_true');
+  /*Future<String> setPositionTrue(String eventCode) async {
+    final url = Uri.parse('https://$host/set_position_true');
     final headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
@@ -181,7 +383,7 @@ class EventPage extends State<EventPageControl> {
       _checkTokenValidity(response.statusCode);
       return 'Errore nella verifica della posizionecl';
     }
-  }
+  }*/
 
   void showCustomSnackbar(BuildContext context, String message,
       {bool isError = false}) {
@@ -196,7 +398,7 @@ class EventPage extends State<EventPageControl> {
           ),
         ),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: isError ? Colors.redAccent.shade200 : Colors.black87,
+        backgroundColor: isError ? Colors.redAccent.shade200 : Colors.green,
         margin: const EdgeInsets.all(12),
         padding: const EdgeInsets.symmetric(
           horizontal: 24,
@@ -247,7 +449,8 @@ class EventPage extends State<EventPageControl> {
 
         // Controlla se la distanza è entro 1 km
         if (distance <= 1000) {
-          message = await setPositionTrue(widget.eventCode);
+          //message = await setPositionTrue(widget.eventCode);
+          message = "Posizione ok";
           showCustomSnackbar(context, message);
         } else {
           message = 'Sei troppo lontano dall\'evento';
@@ -269,7 +472,7 @@ class EventPage extends State<EventPageControl> {
   }
 
   Future<void> _loadLikePhotos() async {
-    final url = Uri.parse('https://' + host + '/get_like');
+    final url = Uri.parse('https://$host/get_like');
     final headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
@@ -304,7 +507,7 @@ class EventPage extends State<EventPageControl> {
   }
 
   Future<void> _showRanking() async {
-    final url = Uri.parse('https://' + host + '/get_ranking');
+    final url = Uri.parse('https://$host/get_ranking');
     final headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
@@ -332,7 +535,7 @@ class EventPage extends State<EventPageControl> {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
     };
-    final url = Uri.parse('https://' + host + '/photoByCode');
+    final url = Uri.parse('https://$host/photoByCode');
 
     final body = jsonEncode({
       'code': widget.eventCode,
@@ -354,6 +557,7 @@ class EventPage extends State<EventPageControl> {
           likedPhotos[i] = false;
           final photoData = eventPhotos[i];
           usernamePhotos[i] = photoData['name'] ?? 'Unknown';
+          profileImages[i] = photoData['image_profile'] ?? 'Unknown';
         }
       });
     } else {
@@ -368,7 +572,7 @@ class EventPage extends State<EventPageControl> {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
     };
-    final url = Uri.parse('https://' + host + '/increment_like');
+    final url = Uri.parse('https://$host/increment_like');
     final body = jsonEncode({'photoId': photoId});
 
     final response = await http.post(
@@ -387,43 +591,6 @@ class EventPage extends State<EventPageControl> {
       var errorData = jsonDecode(response.body);
       _checkTokenValidity(errorData['msg']);
       print('Errore nell\'aggiungere il mi piace');
-    }
-  }
-
-  Future<void> _loadUserProfiles() async {
-    final headers = {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
-    };
-    final url = Uri.parse('https://' + host + '/get_user_profiles');
-
-    try {
-      final body = jsonEncode({
-        'code': widget.eventCode,
-      });
-
-      final response = await http.post(
-        url,
-        headers: headers,
-        body: body,
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          for (int i = 0; i < eventPhotos.length; i++) {
-            if (i < data.length) {
-              profileImages[i] = data[i]['image_path'] ?? '';
-            } else {
-              profileImages[i] = '';
-            }
-          }
-        });
-      } else {
-        _checkTokenValidity(response.statusCode);
-      }
-    } catch (e) {
-      print("Errore nel recuperare le immagini del profilo: $e");
     }
   }
 
@@ -676,14 +843,9 @@ class EventPage extends State<EventPageControl> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.black54),
-                          ),
                           SizedBox(height: 16),
                           Text(
-                            'Caricamento foto...',
+                            'Nessuna Foto',
                             style: TextStyle(
                               color: Colors.black54,
                               fontSize: 16,
@@ -840,6 +1002,66 @@ class EventPage extends State<EventPageControl> {
                   );
                 },
               ),
+      ),
+    );
+  }
+}
+
+class _CountdownUnit extends StatelessWidget {
+  final int value;
+  final String unit;
+
+  const _CountdownUnit({
+    required this.value,
+    required this.unit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.black87,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            value.toString().padLeft(2, '0'),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          unit,
+          style: TextStyle(
+            color: Colors.black87.withOpacity(0.7),
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CountdownSeparator extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 8),
+      child: Text(
+        ":",
+        style: TextStyle(
+          color: Colors.black87,
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
