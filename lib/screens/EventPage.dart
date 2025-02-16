@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
@@ -9,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:social_flutter_giorgio/auth.dart';
 import 'package:social_flutter_giorgio/screens/AuthPage.dart';
 import 'package:social_flutter_giorgio/screens/HomePage.dart';
+import 'package:social_flutter_giorgio/screens/profile.dart';
 
 class EventPageControl extends StatefulWidget {
   final String eventCode;
@@ -23,6 +25,7 @@ class EventPage extends State<EventPageControl> {
   String? userEmail;
   List<dynamic> eventPhotos = [];
   Map<int, String> usernamePhotos = {};
+  Map<int, String> userPhotos = {};
   Map<int, bool> likedPhotos = {};
   List<dynamic> rankedPhotos = [];
   double? eventLatitude;
@@ -77,7 +80,6 @@ class EventPage extends State<EventPageControl> {
       if (eventEndTime == null) {
         throw Exception('Event time not initialized');
       }
-      print(_isEventStarted());
       if (_isEventStarted()) {
         _showEventCountdown();
       } else {
@@ -104,8 +106,7 @@ class EventPage extends State<EventPageControl> {
   }
 
   bool _isEventStarted() {
-    return DateTime.now()
-        .isBefore(eventEndTime!); // Check if we're BEFORE the end time
+    return DateTime.now().isBefore(eventEndTime!);
   }
 
   void _showEventCountdown() {
@@ -117,7 +118,6 @@ class EventPage extends State<EventPageControl> {
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (context, setState) {
-            // 🚀 Ferma il vecchio timer prima di avviarne uno nuovo
             _countdownTimer?.cancel();
 
             _countdownTimer =
@@ -558,6 +558,7 @@ class EventPage extends State<EventPageControl> {
           final photoData = eventPhotos[i];
           usernamePhotos[i] = photoData['name'] ?? 'Unknown';
           profileImages[i] = photoData['image_profile'] ?? 'Unknown';
+          userPhotos[i] = photoData['email'] ?? 'Unknown';
         }
       });
     } else {
@@ -598,9 +599,18 @@ class EventPage extends State<EventPageControl> {
   Widget _buildProfileAvatar(int index) {
     final profileImage = profileImages[index];
     final username = usernamePhotos[index] ?? 'U';
+    final email = userPhotos[index] ?? 'U';
 
-    if (profileImage != null && profileImage.isNotEmpty) {
-      return Container(
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProfilePage(email: email),
+          ),
+        );
+      },
+      child: Container(
         width: 32,
         height: 32,
         decoration: BoxDecoration(
@@ -620,7 +630,7 @@ class EventPage extends State<EventPageControl> {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
           child: Image.network(
-            profileImage,
+            profileImage ?? '',
             width: 32,
             height: 32,
             fit: BoxFit.cover,
@@ -657,19 +667,6 @@ class EventPage extends State<EventPageControl> {
               );
             },
           ),
-        ),
-      );
-    }
-
-    return CircleAvatar(
-      radius: 16,
-      backgroundColor: Colors.grey[200],
-      child: Text(
-        username[0].toUpperCase(),
-        style: const TextStyle(
-          color: Colors.black87,
-          fontWeight: FontWeight.bold,
-          fontSize: 14,
         ),
       ),
     );

@@ -70,6 +70,44 @@ class _HomepageState extends State<Homepage> {
     _initializeData();
   }
 
+  Future<void> _initializeData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    token = prefs.getString('jwtToken');
+    userEmail = prefs.getString('email');
+
+    try {
+      showLoadingDialog("Loading");
+
+      if (token != null) {
+        await fetchProfileData();
+        await fetchImages();
+      } else {
+        if (mounted) {
+          setState(() {
+            isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Errore durante l\'aggiornamento'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+
+    if (mounted) {
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) {
+          Navigator.of(_dialogContext).pop();
+        }
+      });
+    }
+  }
+
   void _handleImageTap(int index) {
     setState(() {
       if (enlargedImageIndex == index) {
@@ -129,34 +167,6 @@ class _HomepageState extends State<Homepage> {
         );
       }
     }
-  }
-
-  Future<void> _initializeData() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    token = prefs.getString('jwtToken');
-    userEmail = prefs.getString('email');
-    try {
-      showLoadingDialog("Loading");
-      if (token != null) {
-        await fetchProfileData();
-        await fetchImages();
-      } else {
-        setState(() {
-          isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Errore durante l\'aggiornamento'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
-
-    Navigator.of(_dialogContext).pop();
   }
 
   Future<void> signOut() async {

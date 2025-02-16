@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:social_flutter_giorgio/auth.dart';
 import 'package:social_flutter_giorgio/screens/AuthPage.dart';
+import 'package:social_flutter_giorgio/screens/profile.dart';
 //import 'package:shared_preferences/shared_preferences.dart';
 
 class ScoreboardPage extends StatefulWidget {
@@ -172,79 +173,92 @@ class _ScoreboardPageState extends State<ScoreboardPage> {
                       final user = _scoreboard[index];
                       final isTopThree = index < 3;
 
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ProfilePage(
+                                email: user['emailUser'],
+                              ),
                             ),
-                          ],
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 50,
-                                height: 50,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  image: DecorationImage(
-                                    image:
-                                        NetworkImage(user['profileImageUrl']),
-                                    fit: BoxFit.cover,
+                          );
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 50,
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    image: DecorationImage(
+                                      image:
+                                          NetworkImage(user['profileImageUrl']),
+                                      fit: BoxFit.cover,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      user['userName'],
-                                      style: const TextStyle(
-                                        fontSize: 16,
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        user['userName'],
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '${user['point']} points',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: isTopThree
+                                        ? _getRankColor(index)
+                                        : Colors.grey[100],
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '#${index + 1}',
+                                      style: TextStyle(
+                                        color: isTopThree
+                                            ? Colors.white
+                                            : Colors.grey[600],
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '${user['point']} points',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  color: isTopThree
-                                      ? _getRankColor(index)
-                                      : Colors.grey[100],
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    '#${index + 1}',
-                                    style: TextStyle(
-                                      color: isTopThree
-                                          ? Colors.white
-                                          : Colors.grey[600],
-                                      fontWeight: FontWeight.w600,
-                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       );

@@ -22,12 +22,13 @@ class _ProfilePageState extends State<ProfilePage> {
   List<String> images = [];
   bool isLoading = true;
   String? token;
-  //String host = "10.0.2.2:5000";
   String host = "event-production.up.railway.app";
+  var point = "0";
 
-  // Add state for tracking enlarged image
   int? enlargedImageIndex;
   bool isImageEnlarged = false;
+
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -93,6 +94,7 @@ class _ProfilePageState extends State<ProfilePage> {
           setState(() {
             userName = data['userName'];
             profileImageUrl = data['profileImageUrl'];
+            point = data['point'];
             isLoading = false;
           });
         }
@@ -142,10 +144,10 @@ class _ProfilePageState extends State<ProfilePage> {
         // If tapping the already enlarged image, reset it
         enlargedImageIndex = null;
         isImageEnlarged = false;
-      } else if (isImageEnlarged) {
-        // If another image is enlarged, reset it
-        enlargedImageIndex = null;
-        isImageEnlarged = false;
+      } else {
+        // If tapping a new image or no image is enlarged
+        enlargedImageIndex = index;
+        isImageEnlarged = true;
       }
     });
   }
@@ -157,81 +159,192 @@ class _ProfilePageState extends State<ProfilePage> {
     });
   }
 
+  Widget _buildStat(String label, String value) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey[600],
+            letterSpacing: -0.2,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDivider() {
+    return Container(
+      height: 24,
+      width: 1,
+      color: Colors.grey[300],
+    );
+  }
+
+  Widget _buildImageTile(int index) {
+    return Hero(
+      tag: 'image_$index',
+      child: GestureDetector(
+        onTap: () => _handleImageTap(index),
+        onLongPress: () => _handleImageLongPress(index),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                spreadRadius: 1,
+                blurRadius: 5,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              images[index],
+              fit: BoxFit.cover,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Profile'),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.black87,
+        title: Text(
+          'Profile',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+            letterSpacing: -0.5,
+          ),
+        ),
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Stack(
-              children: [
-                Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircleAvatar(
-                            radius: 40,
-                            backgroundImage: profileImageUrl != null
-                                ? NetworkImage(profileImageUrl!)
-                                : null,
-                            child: profileImageUrl == null
-                                ? const Icon(Icons.person, size: 40)
-                                : null,
-                          ),
-                          const SizedBox(width: 16),
-                          Text(
-                            userName ?? 'Unknown User',
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
+      body: Stack(
+        children: [
+          isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    color: Colors.black54,
+                    strokeWidth: 2,
+                  ),
+                )
+              : CustomScrollView(
+                  controller: _scrollController,
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Container(
+                        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 100,
+                              height: 100,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    spreadRadius: 1,
+                                    blurRadius: 15,
+                                    offset: const Offset(0, 5),
+                                  ),
+                                ],
+                              ),
+                              child: CircleAvatar(
+                                radius: 50,
+                                backgroundColor: Colors.grey[200],
+                                backgroundImage: profileImageUrl != null
+                                    ? NetworkImage(profileImageUrl!)
+                                    : null,
+                                child: profileImageUrl == null
+                                    ? Icon(
+                                        Icons.person,
+                                        size: 50,
+                                        color: Colors.grey[400],
+                                      )
+                                    : null,
+                              ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 16),
+                            Text(
+                              userName ?? 'Unknown User',
+                              style: const TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            const SizedBox(height: 24),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                _buildStat('Posts', images.length.toString()),
+                                _buildDivider(),
+                                _buildStat('Points', point),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    Expanded(
-                      child: GridView.builder(
-                        padding: const EdgeInsets.all(10),
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      sliver: SliverGrid(
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 3,
                           crossAxisSpacing: 8,
                           mainAxisSpacing: 8,
                         ),
-                        itemCount: images.length,
-                        itemBuilder: (context, index) {
-                          return GestureDetector(
-                            onTap: () => _handleImageTap(index),
-                            onLongPress: () => _handleImageLongPress(index),
-                            child: Image.network(
-                              images[index],
-                              fit: BoxFit.cover,
-                            ),
-                          );
-                        },
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            return _buildImageTile(index);
+                          },
+                          childCount: images.length,
+                        ),
                       ),
                     ),
                   ],
                 ),
-                if (isImageEnlarged && enlargedImageIndex != null)
-                  GestureDetector(
-                    onTap: () => _handleImageTap(enlargedImageIndex!),
-                    child: Container(
-                      color: Colors.black87,
-                      alignment: Alignment.center,
-                      child: Image.network(
-                        images[enlargedImageIndex!],
-                        fit: BoxFit.contain,
-                      ),
-                    ),
+          if (isImageEnlarged && enlargedImageIndex != null)
+            GestureDetector(
+              onTap: () => _handleImageTap(enlargedImageIndex!),
+              child: Container(
+                color: Colors.black.withOpacity(0.95),
+                alignment: Alignment.center,
+                child: Hero(
+                  tag: 'image_$enlargedImageIndex',
+                  child: Image.network(
+                    images[enlargedImageIndex!],
+                    fit: BoxFit.contain,
                   ),
-              ],
+                ),
+              ),
             ),
+        ],
+      ),
     );
   }
 }
