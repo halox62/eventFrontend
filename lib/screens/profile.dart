@@ -45,7 +45,7 @@ class _ProfilePageState extends State<ProfilePage> {
         if (user != null) {
           String? idToken = await user.getIdToken(true);
           prefs.setString('jwtToken', idToken!);
-          initState();
+          _initializeData();
         } else {
           await Auth().signOut();
           Navigator.pushReplacement(

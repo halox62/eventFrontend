@@ -82,11 +82,20 @@ class ShareProfileDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
+          style: TextButton.styleFrom(
+            foregroundColor: Colors.black,
+          ),
           child: const Text('Chiudi'),
         ),
         ElevatedButton.icon(
           onPressed: _shareLink,
-          icon: const Icon(Icons.share),
+          icon: const Icon(
+            Icons.share,
+            color: Colors.black,
+          ),
+          style: TextButton.styleFrom(
+            foregroundColor: Colors.black,
+          ),
           label: const Text('Condividi'),
         ),
       ],

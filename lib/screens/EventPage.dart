@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:ui';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
@@ -41,13 +40,14 @@ class EventPage extends State<EventPageControl> {
   Map<int, String> profileImages = {};
   BuildContext? _dialogContext;
   late String endTime;
+  late String startDate;
   DateTime? eventEndTime;
   Timer? _countdownTimer;
 
   @override
   void initState() {
     super.initState();
-    _initializeEventPhotos();
+    _initializeEventPhotos(true);
   }
 
   void showLoadingDialog(String message) {
@@ -63,7 +63,9 @@ class EventPage extends State<EventPageControl> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const CircularProgressIndicator(),
+                const CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                ),
                 const SizedBox(height: 16),
                 Text(message),
               ],
@@ -74,7 +76,7 @@ class EventPage extends State<EventPageControl> {
     );
   }
 
-  Future<void> _initializeEventPhotos() async {
+  Future<void> _initializeEventPhotos(bool loading) async {
     try {
       await _name();
       if (eventEndTime == null) {
@@ -83,7 +85,10 @@ class EventPage extends State<EventPageControl> {
       if (_isEventStarted()) {
         _showEventCountdown();
       } else {
-        showLoadingDialog("Caricamento Eventi");
+        if (loading) {
+          showLoadingDialog("Caricamento Eventi");
+        }
+
         await _loadEventPhotos();
         await _loadLikePhotos();
         await _fetchEventCoordinates();
@@ -98,7 +103,6 @@ class EventPage extends State<EventPageControl> {
         );
       }
     } finally {
-      // Always try to dismiss the dialog if it exists
       if (_dialogContext != null && mounted) {
         Navigator.of(_dialogContext!).pop();
       }
@@ -127,7 +131,7 @@ class EventPage extends State<EventPageControl> {
                 return;
               }
 
-              setState(() {}); // 🔄 Aggiorna la UI
+              setState(() {});
 
               final now = DateTime.now();
               if (now.isAfter(eventEndTime!)) {
@@ -137,7 +141,7 @@ class EventPage extends State<EventPageControl> {
                   Navigator.of(context).pop();
                   Future.delayed(const Duration(milliseconds: 100), () {
                     if (mounted) {
-                      _initializeEventPhotos();
+                      _initializeEventPhotos(true);
                     }
                   });
                 }
@@ -242,14 +246,13 @@ class EventPage extends State<EventPageControl> {
         );
       },
     ).then((_) {
-      _countdownTimer
-          ?.cancel(); // ⛔ Ferma il timer quando il dialog viene chiuso
+      _countdownTimer?.cancel();
     });
   }
 
   Future<void> _handleRefresh() async {
     try {
-      _initializeEventPhotos();
+      _initializeEventPhotos(true);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -271,7 +274,7 @@ class EventPage extends State<EventPageControl> {
         if (user != null) {
           String? idToken = await user.getIdToken(true);
           prefs.setString('jwtToken', idToken!);
-          initState();
+          _initializeEventPhotos(false);
         } else {
           await Auth().signOut();
           Navigator.pushReplacement(
@@ -312,11 +315,13 @@ class EventPage extends State<EventPageControl> {
         final data = jsonDecode(response.body);
         eventName = data['name'];
         endTime = data['EndTime'];
+        startDate = data['startDate'];
         final timeParts = endTime.split(':');
+        final DateParts = startDate.split("-");
         eventEndTime = DateTime(
-          DateTime.now().year,
-          DateTime.now().month,
-          DateTime.now().day,
+          int.parse(DateParts[0]),
+          int.parse(DateParts[1]),
+          int.parse(DateParts[2]),
           int.parse(timeParts[0]),
           int.parse(timeParts[1]),
         );

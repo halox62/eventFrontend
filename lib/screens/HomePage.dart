@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:social_flutter_giorgio/firebase_options.dart';
 import 'package:social_flutter_giorgio/screens/AuthPage.dart';
@@ -67,20 +68,23 @@ class _HomepageState extends State<Homepage> {
   @override
   void initState() {
     super.initState();
-    _initializeData();
+    _initializeData(true);
   }
 
-  Future<void> _initializeData() async {
+  Future<void> _initializeData(bool loading) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     token = prefs.getString('jwtToken');
     userEmail = prefs.getString('email');
 
     try {
-      showLoadingDialog("Loading");
+      if (loading) {
+        showLoadingDialog("Loading");
+      }
 
       if (token != null) {
         await fetchProfileData();
         await fetchImages();
+        Navigator.of(_dialogContext).pop();
       } else {
         if (mounted) {
           setState(() {
@@ -90,6 +94,7 @@ class _HomepageState extends State<Homepage> {
       }
     } catch (e) {
       if (mounted) {
+        Navigator.of(_dialogContext).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Errore durante l\'aggiornamento'),
@@ -97,14 +102,6 @@ class _HomepageState extends State<Homepage> {
           ),
         );
       }
-    }
-
-    if (mounted) {
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (mounted) {
-          Navigator.of(_dialogContext).pop();
-        }
-      });
     }
   }
 
@@ -129,7 +126,7 @@ class _HomepageState extends State<Homepage> {
 
   Future<void> _handleRefresh() async {
     try {
-      await _initializeData();
+      await _initializeData(true);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -151,7 +148,7 @@ class _HomepageState extends State<Homepage> {
         if (user != null) {
           String? idToken = await user.getIdToken(true);
           prefs.setString('jwtToken', idToken!);
-          _initializeData();
+          _initializeData(false);
         } else {
           await Auth().signOut();
           Navigator.pushReplacement(
@@ -221,7 +218,9 @@ class _HomepageState extends State<Homepage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const CircularProgressIndicator(),
+                const CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                ),
                 const SizedBox(height: 16),
                 Text(message),
               ],
@@ -267,7 +266,7 @@ class _HomepageState extends State<Homepage> {
     var response = await request.send();
 
     if (response.statusCode == 200) {
-      await _initializeData();
+      await _initializeData(true);
     } else {
       _checkTokenValidity(response.statusCode);
       print('Upload failed');
@@ -275,13 +274,19 @@ class _HomepageState extends State<Homepage> {
   }
 
   Future<List<dynamic>?> checkUserEvents() async {
+    DateTime now = DateTime.now();
+    String clientTime = DateFormat("HH:mm").format(now);
+
     final headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
     };
+
     try {
-      final response = await http.get(Uri.parse('https://$host/getEventCode'),
-          headers: headers);
+      final response = await http.get(
+        Uri.parse('https://$host/getEventCode?clientTime=$clientTime'),
+        headers: headers,
+      );
 
       if (response.statusCode == 200) {
         Map<String, dynamic> jsonResponse = json.decode(response.body);
@@ -333,7 +338,7 @@ class _HomepageState extends State<Homepage> {
         var response = await request.send();
 
         if (response.statusCode == 200) {
-          await _initializeData();
+          await _initializeData(true);
           message = 'Foto caricata per l\'evento $eventName';
         } else {
           _checkTokenValidity(response.statusCode);
@@ -518,7 +523,9 @@ class _HomepageState extends State<Homepage> {
   }
 
   Widget _buildButton(String text,
-      {bool outlined = false, required void Function() onPressed}) {
+      {bool outlined = false,
+      required void Function() onPressed,
+      required MaterialColor color}) {
     return outlined
         ? OutlinedButton(
             style: OutlinedButton.styleFrom(
@@ -526,6 +533,8 @@ class _HomepageState extends State<Homepage> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
+              backgroundColor: color,
+              foregroundColor: Colors.white,
             ),
             onPressed: onPressed,
             child: Text(text, style: const TextStyle(fontSize: 16)),
@@ -536,6 +545,8 @@ class _HomepageState extends State<Homepage> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
+              backgroundColor: color,
+              foregroundColor: Colors.white,
             ),
             onPressed: onPressed,
             child: Text(text, style: const TextStyle(fontSize: 16)),
@@ -630,6 +641,7 @@ class _HomepageState extends State<Homepage> {
                     const SizedBox(height: 24),
                     _buildButton(
                       "Scegli evento",
+                      color: Colors.green,
                       onPressed: () async {
                         Navigator.of(dialogContext).pop();
                         showEventsDialog(events);
@@ -638,6 +650,7 @@ class _HomepageState extends State<Homepage> {
                     const SizedBox(height: 8),
                     _buildButton(
                       "Carica senza evento",
+                      color: Colors.grey,
                       outlined: true,
                       onPressed: () async {
                         Navigator.of(dialogContext).pop();
@@ -683,31 +696,141 @@ class _HomepageState extends State<Homepage> {
     );
   }
 
-  void onTabTapped() async {
+  void onTabTapped() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Seleziona sorgente',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildOptionButton(
+                    context: context,
+                    icon: Icons.photo_library_outlined,
+                    label: 'Galleria',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _processGalleryImage();
+                    },
+                  ),
+                  _buildOptionButton(
+                    context: context,
+                    icon: Icons.camera_alt_outlined,
+                    label: 'Fotocamera',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _processCameraImage();
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildOptionButton({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: const Color.fromRGBO(177, 233, 144, 0.3),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(
+              icon,
+              size: 40,
+              color: const Color.fromRGBO(76, 175, 80, 1),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w500,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _processCameraImage() async {
     try {
       showLoadingDialog("Apertura fotocamera...");
       final image = await takePicture();
       Navigator.of(_dialogContext).pop();
 
       if (image != null) {
-        setState(() {
-          _capturedImage = image;
-        });
-
-        showLoadingDialog("Verifica eventi...");
-        final isEnrolledInEvents = await checkUserEvents();
-        Navigator.of(_dialogContext).pop();
-
-        if (isEnrolledInEvents != null && isEnrolledInEvents.isNotEmpty) {
-          // Mostra la dialog per scegliere l'evento
-          _showEventSelectionDialog(isEnrolledInEvents, image);
-        } else {
-          // Carica l'immagine senza evento
-          _uploadImageWithoutEvent(image);
-        }
+        _processSelectedImage(image);
       }
     } catch (e) {
-      Navigator.of(_dialogContext).pop(); // Chiude eventuali dialog attivi
+      Navigator.of(_dialogContext).pop();
+      _showErrorDialog("Si è verificato un errore con la fotocamera: $e");
+    }
+  }
+
+  Future<void> _processGalleryImage() async {
+    try {
+      showLoadingDialog("Apertura galleria...");
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+      Navigator.of(_dialogContext).pop();
+
+      if (pickedFile != null) {
+        File image = File(pickedFile.path);
+        _processSelectedImage(image);
+      }
+    } catch (e) {
+      Navigator.of(_dialogContext).pop();
+      _showErrorDialog("Si è verificato un errore con la galleria: $e");
+    }
+  }
+
+  Future<void> _processSelectedImage(File image) async {
+    try {
+      setState(() {
+        _capturedImage = image;
+      });
+
+      showLoadingDialog("Verifica eventi...");
+      final isEnrolledInEvents = await checkUserEvents();
+      Navigator.of(_dialogContext).pop();
+
+      if (isEnrolledInEvents != null && isEnrolledInEvents.isNotEmpty) {
+        _showEventSelectionDialog(isEnrolledInEvents, image);
+      } else {
+        _uploadImageWithoutEvent(image);
+      }
+    } catch (e) {
+      Navigator.of(_dialogContext).pop();
       _showErrorDialog("Si è verificato un errore: $e");
     }
   }
@@ -746,7 +869,6 @@ class _HomepageState extends State<Homepage> {
           await http.post(Uri.parse('https://$host/profile'), headers: headers);
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-
         if (mounted) {
           setState(() {
             userName = data['userName'];
@@ -789,7 +911,7 @@ class _HomepageState extends State<Homepage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Foto eliminata con successo')),
         );
-        await _initializeData();
+        await _initializeData(true);
         return true;
       } else {
         _checkTokenValidity(response.statusCode);

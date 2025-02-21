@@ -40,7 +40,7 @@ class _EventCalendarState extends State<EventCalendar> {
   @override
   void initState() {
     super.initState();
-    _initializePageEvent();
+    _initializePageEvent(true);
   }
 
   void showLoadingDialog(String message) {
@@ -56,7 +56,9 @@ class _EventCalendarState extends State<EventCalendar> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const CircularProgressIndicator(),
+                const CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                ),
                 const SizedBox(height: 16),
                 Text(message),
               ],
@@ -67,9 +69,12 @@ class _EventCalendarState extends State<EventCalendar> {
     );
   }
 
-  Future<void> _initializePageEvent() async {
+  Future<void> _initializePageEvent(bool loading) async {
     try {
-      showLoadingDialog("Caricamento Eventi");
+      if (loading) {
+        showLoadingDialog("Caricamento Eventi");
+      }
+
       await _initializeEventCreate();
       await _initializeEventSubscribe();
       Navigator.of(_dialogContext).pop();
@@ -151,7 +156,7 @@ class _EventCalendarState extends State<EventCalendar> {
 
   Future<void> _handleRefresh() async {
     try {
-      _initializePageEvent();
+      _initializePageEvent(true);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -173,7 +178,7 @@ class _EventCalendarState extends State<EventCalendar> {
         if (user != null) {
           String? idToken = await user.getIdToken(true);
           prefs.setString('jwtToken', idToken!);
-          initState();
+          _initializePageEvent(false);
         } else {
           await Auth().signOut();
           Navigator.pushReplacement(
@@ -211,8 +216,7 @@ class _EventCalendarState extends State<EventCalendar> {
               jsonResponse.map((date) => DateTime.parse(date)).toList();
           setState(() {});
         } else {
-          var errorData = jsonDecode(response.body);
-          _checkTokenValidity(errorData['msg']);
+          _checkTokenValidity(response.statusCode);
         }
       } catch (e) {
         _showFeedbackMessage('Errore di connessione durante l\'eliminazione',
@@ -852,6 +856,7 @@ class _EventCalendarState extends State<EventCalendar> {
                       _showCreateEventDialog(context);
                     },
                     backgroundColor: Colors.amber[800],
+                    foregroundColor: Colors.white,
                     elevation: 4.0,
                     child: const Icon(Icons.add),
                   ),
@@ -866,6 +871,7 @@ class _EventCalendarState extends State<EventCalendar> {
                       _showAnotherDialog(context);
                     },
                     backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
                     elevation: 4.0,
                     child: const Icon(Icons.event),
                   ),
@@ -922,10 +928,17 @@ class _EventCalendarState extends State<EventCalendar> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  icon: const Icon(Icons.qr_code_scanner, size: 24),
+                  icon: const Icon(
+                    Icons.qr_code_scanner,
+                    size: 24,
+                    color: Colors.black,
+                  ),
                   label: const Text(
                     'Scansiona QR Code',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -946,7 +959,7 @@ class _EventCalendarState extends State<EventCalendar> {
                     labelText: 'Codice evento',
                     hintText: 'Inserisci 8 caratteri',
                     labelStyle: const TextStyle(
-                        color: Colors.green), // Changed to green
+                        color: Colors.black), // Changed to green
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: const BorderSide(
@@ -986,7 +999,7 @@ class _EventCalendarState extends State<EventCalendar> {
                       child: const Text(
                         'Annulla',
                         style: TextStyle(
-                          color: Colors.green, // Changed to green
+                          color: Colors.black, // Changed to green
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -1021,6 +1034,7 @@ class _EventCalendarState extends State<EventCalendar> {
                       child: const Text(
                         'Conferma',
                         style: TextStyle(
+                          color: Colors.black,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -1325,7 +1339,6 @@ class _EventCalendarState extends State<EventCalendar> {
     ));
   }
 
-// Funzione per creare l'evento
   Future<String> createEvent(String eventName, String code,
       DateTime selectedDate, TimeOfDay timeOfDay, LatLng location) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -1358,6 +1371,21 @@ class _EventCalendarState extends State<EventCalendar> {
         return "NO";
       }
 
+      if (selectedDate.year == today.year &&
+          selectedDate.month == today.month &&
+          selectedDate.day == today.day) {
+        TimeOfDay now = TimeOfDay.now();
+        if (timeOfDay.hour < now.hour ||
+            (timeOfDay.hour == now.hour && timeOfDay.minute < now.minute)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("L'orario selezionato è già passato!"),
+            ),
+          );
+          return "NO";
+        }
+      }
+
       // Calcolo della data e ora di inizio
       DateTime startDateTime = DateTime(
         selectedDate.year,
@@ -1367,19 +1395,25 @@ class _EventCalendarState extends State<EventCalendar> {
         timeOfDay.minute,
       );
 
+      // Calcolo della data e ora di fine (24 ore dopo = 1440 minuti)
       DateTime endDateTime = startDateTime.add(const Duration(minutes: 1440));
 
-      // Formattazione della data e ora di fine
+// Formattazione della data e ora di fine
       String formattedEndDate = DateFormat('yyyy-MM-dd').format(endDateTime);
-      String formattedEndTime =
-          '${endDateTime.hour.toString().padLeft(2, '0')}:${endDateTime.minute.toString().padLeft(2, '0')}';
+      String formattedEndTime = DateFormat('HH:mm').format(endDateTime);
+
+// Aggiunta di tutti i campi alla richiesta
       request.fields['eventName'] = eventName;
       request.fields['eventDate'] = formattedDate;
+      request.fields['eventTime'] = DateFormat('HH:mm').format(startDateTime);
       request.fields['endDate'] = formattedEndDate;
       request.fields['endTime'] = formattedEndTime;
       request.fields['latitudine'] = location.latitude.toString();
       request.fields['longitude'] = location.longitude.toString();
       request.fields['create'] = "yes";
+
+      print(formattedEndDate);
+      print(formattedEndTime);
 
       var response = await request.send();
 
@@ -1417,42 +1451,92 @@ class _EventCalendarState extends State<EventCalendar> {
     String res =
         await createEvent(eventName, data, selectedDate, timeOfDay, location);
     Navigator.of(_dialogContext).pop();
+
     if (res == "ok") {
       showDialog(
         context: context,
         builder: (context) {
           return AlertDialog(
             title: const Text('QR Code'),
-            content: SizedBox(
-              width: 250.0, // Imposta una larghezza fissa
-              child: Column(
-                mainAxisSize: MainAxisSize
-                    .min, // Imposta la dimensione minima per la colonna
-                children: [
-                  QrImageView(
-                    data: data,
-                    version: QrVersions.auto,
-                    size: 200.0,
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                QrImageView(
+                  data: data,
+                  version: QrVersions.auto,
+                  size: 200.0,
+                ),
+                const SizedBox(height: 20),
+                const Text('Condividi il tuo QR Code!'),
+
+                // Codice + Pulsante copia
+                Container(
+                  margin: const EdgeInsets.only(top: 16, bottom: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest
+                        .withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const SizedBox(
-                      height: 20), // Spazio tra il QR code e il testo
-                  const Text('Condividi il tuo QR Code!'),
-                ],
-              ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        data,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                              fontWeight: FontWeight.w500,
+                            ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.copy, size: 20),
+                        onPressed: () async {
+                          await Clipboard.setData(ClipboardData(text: data));
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content:
+                                    const Text('Codice copiato negli appunti'),
+                                behavior: SnackBarBehavior.floating,
+                                width: 300,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        tooltip: 'Copia codice',
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
             actions: [
-              TextButton(
-                child: const Text('Condividi'),
-                onPressed: () {
-                  Share.share(data); // Condividi i dettagli dell'evento
-                },
-              ),
-              TextButton(
-                child: const Text('Chiudi'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  initState();
-                },
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton(
+                    child: const Text('Condividi'),
+                    onPressed: () {
+                      Share.share(data);
+                    },
+                  ),
+                  TextButton(
+                    child: const Text('Chiudi'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      initState();
+                    },
+                  ),
+                ],
               ),
             ],
           );
