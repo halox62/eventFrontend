@@ -52,6 +52,8 @@ dependencies:
   rename: ^3.0.2
   flutter_launcher_icons: ^0.14.3
   #google_mobile_ads: ^2.4.0
+  cached_network_image: ^3.4.1
+  font_awesome_flutter: ^10.8.0
 
 flutter_icons:
   android: true

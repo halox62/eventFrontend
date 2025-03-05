@@ -33,14 +33,18 @@ class _EventCalendarState extends State<EventCalendar> {
   //String host = "127.0.0.1:5000";
   //String host = "10.0.2.2:5000";
   String host = "event-production.up.railway.app";
+  //final String host = "event-fit.it";
   String eventName = "";
   bool creator = false;
   late BuildContext _dialogContext;
+  int count = 0;
 
   @override
   void initState() {
     super.initState();
-    _initializePageEvent(true);
+    if (count == 0) {
+      _initializePageEvent(true);
+    }
   }
 
   void showLoadingDialog(String message) {
@@ -70,6 +74,7 @@ class _EventCalendarState extends State<EventCalendar> {
   }
 
   Future<void> _initializePageEvent(bool loading) async {
+    count++;
     try {
       if (loading) {
         showLoadingDialog("Caricamento Eventi");

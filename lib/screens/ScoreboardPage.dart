@@ -23,12 +23,8 @@ class _ScoreboardPageState extends State<ScoreboardPage> {
   //String host = "127.0.0.1:5000";
   //String host = "10.0.2.2:5000";
   String host = "event-production.up.railway.app";
+  //final String host = "event-fit.it";
   String? token;
-  /*List<dynamic> _userRanking = [];
-  bool _isLoadingTop100 = true;
-  bool _isLoadingUserRanking = true;
-  bool _hasErrorTop100 = false;
-  bool _hasErrorUserRanking = false;*/
 
   @override
   void initState() {

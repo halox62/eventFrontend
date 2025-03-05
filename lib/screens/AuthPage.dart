@@ -25,7 +25,8 @@ class _AuthPageState extends State<AuthPage> {
   File? _profileImage;
   bool isLogin = true;
   bool _isPasswordVisible = false;
-  String host = "event-production.up.railway.app";
+  //String host = "event-production.up.railway.app";
+  final String host = "event-fit.it";
   bool _isLoading = false;
 
   @override

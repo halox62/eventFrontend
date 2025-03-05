@@ -27,11 +27,15 @@ class EventPage extends State<EventPageControl> {
   Map<int, String> userPhotos = {};
   Map<int, bool> likedPhotos = {};
   List<dynamic> rankedPhotos = [];
+  List<String> points = [];
   double? eventLatitude;
   double? eventLongitude;
+  int? enlargedImageIndex;
+  bool isImageEnlarged = false;
   //String host = "127.0.0.1:5000";
   //String host = "10.0.2.2:5000";
   String host = "event-production.up.railway.app";
+  //final String host = "event-fit.it";
   String? eventName;
   String? token;
   String? profileImageUrl;
@@ -557,6 +561,7 @@ class EventPage extends State<EventPageControl> {
 
       setState(() {
         eventPhotos = List<Map<String, dynamic>>.from(data);
+        print(eventPhotos);
         likedPhotos = {};
         for (int i = 0; i < eventPhotos.length; i++) {
           likedPhotos[i] = false;
@@ -564,6 +569,7 @@ class EventPage extends State<EventPageControl> {
           usernamePhotos[i] = photoData['name'] ?? 'Unknown';
           profileImages[i] = photoData['image_profile'] ?? 'Unknown';
           userPhotos[i] = photoData['email'] ?? 'Unknown';
+          points[i] = photoData['point'] ?? '0';
         }
       });
     } else {
@@ -906,6 +912,7 @@ class EventPage extends State<EventPageControl> {
                               await _likePhoto(index);
                             }
                           },
+                          onLongPress: () => _handleImageLongPress(index),
                           child: Container(
                             constraints: BoxConstraints(
                               maxHeight: MediaQuery.of(context).size.width,
@@ -977,24 +984,91 @@ class EventPage extends State<EventPageControl> {
                             ),
                           ),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.all(12),
+                        Positioned(
+                          top: 360,
+                          right: 8,
+                          left: 8,
                           child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Icon(
-                                Icons.favorite,
-                                size: 20,
-                                color: likedPhotos[index] == true
-                                    ? Colors.red
-                                    : Colors.grey[400],
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.favorite,
+                                    size: 20,
+                                    color: likedPhotos[index] == true
+                                        ? Colors.red
+                                        : Colors.grey[400],
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${eventPhotos[index]['likes'] ?? 0} likes',
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '${eventPhotos[index]['likes'] ?? 0} likes',
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                              Row(
+                                mainAxisSize: MainAxisSize
+                                    .min, // Mantiene gli elementi compatti
+                                children: [
+                                  // Pulsante Preferito
+                                  Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(20),
+                                      onTap: () => savePhoto(index),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(8),
+                                            child: const Icon(
+                                              Icons.star,
+                                              color: Colors.amber,
+                                              size: 20,
+                                            ),
+                                          ),
+                                          Text(
+                                            (points.isNotEmpty &&
+                                                        index < points.length
+                                                    ? points[index]
+                                                    : '0')
+                                                .toString(),
+                                            style: const TextStyle(
+                                              color: Colors.black,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+
+                                  Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(20),
+                                      onTap: () => savePhoto(index),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.5),
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                        ),
+                                        child: const Icon(
+                                          Icons.save,
+                                          color: Colors.white,
+                                          size: 20,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -1006,6 +1080,194 @@ class EventPage extends State<EventPageControl> {
               ),
       ),
     );
+  }
+
+  Future<void> _handleImageLongPress(int index) async {
+    setState(() {
+      enlargedImageIndex = index;
+      isImageEnlarged = true;
+    });
+
+    try {
+      String id = eventPhotos[index]["id"].toString();
+      final response = await http.get(
+        Uri.parse('https://$host/infoPhoto?id_photo=$id'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success']) {
+          showModalBottomSheet(
+            context: context,
+            backgroundColor: Colors.transparent,
+            isScrollControlled: true,
+            builder: (BuildContext context) {
+              return Container(
+                height: MediaQuery.of(context).size.height * 0.7,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      spreadRadius: 1,
+                      blurRadius: 10,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      margin: EdgeInsets.only(top: 12),
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Text(
+                        'Dettagli Foto',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        padding: EdgeInsets.symmetric(horizontal: 20),
+                        itemCount: data['data'].length,
+                        itemBuilder: (context, index) {
+                          final item = data['data'][index];
+                          return Card(
+                            elevation: 2,
+                            margin: EdgeInsets.only(bottom: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Padding(
+                              padding: EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildInfoRow('Tipo', item['type']),
+                                  SizedBox(height: 8),
+                                  _buildInfoRow('Marca', item['brand']),
+                                  SizedBox(height: 8),
+                                  _buildInfoRow('Modello', item['model']),
+                                  SizedBox(height: 8),
+                                  _buildInfoRow('Feedback', item['feedback']),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        }
+      } else {
+        _checkTokenValidity(response.statusCode);
+        throw Exception('Failed to load photo info');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Nessun dettaglio disponibile'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '$label: ',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[700],
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              color: Colors.black87,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> savePhoto(int index) async {
+    try {
+      String idPhoto = eventPhotos[index]["id"].toString();
+      final uri = Uri.parse('https://$host/salvePhoto?id_photo=$idPhoto');
+
+      final response = await http.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      // Controlla lo status code
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        // Decodifica la risposta per mostrare un messaggio più specifico
+        final Map<String, dynamic> data = jsonDecode(response.body);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(data['message'] ?? 'Foto salvata con successo'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        // Controlla se è un problema di token
+        _checkTokenValidity(response.statusCode);
+
+        // Mostra errore specifico se disponibile nella risposta
+        try {
+          final Map<String, dynamic> errorData = jsonDecode(response.body);
+          throw Exception(
+              errorData['message'] ?? 'Errore durante il salvataggio');
+        } catch (e) {
+          throw Exception(
+              'Errore durante il salvataggio: ${response.statusCode}');
+        }
+      }
+    } catch (e) {
+      // Registra l'errore e mostra un messaggio all'utente
+      print("Errore durante la chiamata API: $e");
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Impossibile salvare la foto. Riprova più tardi.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+
+      throw Exception("Impossibile connettersi all'API.");
+    }
   }
 }
 
