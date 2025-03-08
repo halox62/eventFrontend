@@ -122,6 +122,8 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen> {
           _loadSavedPhotos();
         } else {
           await Auth().signOut();
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          prefs.clear();
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const AuthPage()),
@@ -129,6 +131,8 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen> {
         }
       } catch (e) {
         await Auth().signOut();
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        prefs.clear();
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const AuthPage()),

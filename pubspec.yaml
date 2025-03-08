@@ -39,7 +39,6 @@ dependencies:
   geolocator: ^13.0.2
   geolocator_apple: ^2.3.8 
   permission_handler: ^11.3.1
-  barcode_scan2: ^4.2.0
   google_fonts: ^6.1.0
   firebase_core: ^3.10.1 
   firebase_auth: ^5.4.1
@@ -54,6 +53,8 @@ dependencies:
   #google_mobile_ads: ^2.4.0
   cached_network_image: ^3.4.1
   font_awesome_flutter: ^10.8.0
+  barcode_scan2: ^4.5.0
+  
 
 flutter_icons:
   android: true

@@ -26,6 +26,9 @@ class _ScoreboardPageState extends State<ScoreboardPage> {
   //final String host = "event-fit.it";
   String? token;
 
+  Map<String, dynamic>? _currentUserData;
+  int? _currentUserPosition;
+
   @override
   void initState() {
     super.initState();
@@ -45,6 +48,8 @@ class _ScoreboardPageState extends State<ScoreboardPage> {
           _fetchScoreboard();
         } else {
           await Auth().signOut();
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          prefs.clear();
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const AuthPage()),
@@ -52,6 +57,8 @@ class _ScoreboardPageState extends State<ScoreboardPage> {
         }
       } catch (e) {
         await Auth().signOut();
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        prefs.clear();
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const AuthPage()),
@@ -68,13 +75,18 @@ class _ScoreboardPageState extends State<ScoreboardPage> {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       };
+
       final response = await http.get(Uri.parse('https://$host/get_scoreboard'),
           headers: headers);
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+
         setState(() {
           _scoreboard = data['scoreboard'];
+          _currentUserData = data['currentUser'];
+          _currentUserPosition =
+              _currentUserData != null ? _currentUserData!['position'] : null;
           _isLoading = false;
         });
       } else {
@@ -159,109 +171,186 @@ class _ScoreboardPageState extends State<ScoreboardPage> {
                 )
               : RefreshIndicator(
                   onRefresh: _handleRefresh,
-                  child: ListView.separated(
+                  child: ListView.builder(
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.all(16),
-                    itemCount: _scoreboard.length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: 12),
+                    itemCount:
+                        _scoreboard.length + (_currentUserData != null ? 1 : 0),
                     itemBuilder: (context, index) {
-                      final user = _scoreboard[index];
-                      final isTopThree = index < 3;
+                      // If current user exists, show them at the top
+                      if (_currentUserData != null && index == 0) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8.0),
+                              child: Text(
+                                'Your Position',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                            ),
+                            _buildUserItem(_currentUserData!,
+                                _currentUserPosition! - 1, true),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 16.0),
+                              child: Divider(
+                                  color: Colors.grey[300], thickness: 1.5),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8.0),
+                              child: Text(
+                                'Leaderboard',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                        );
+                      }
 
-                      return GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ProfilePage(
-                                email: user['emailUser'],
-                              ),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 50,
-                                  height: 50,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    image: DecorationImage(
-                                      image:
-                                          NetworkImage(user['profileImageUrl']),
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        user['userName'],
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        '${user['point']} points',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey[600],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Container(
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    color: isTopThree
-                                        ? _getRankColor(index)
-                                        : Colors.grey[100],
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      '#${index + 1}',
-                                      style: TextStyle(
-                                        color: isTopThree
-                                            ? Colors.white
-                                            : Colors.grey[600],
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
+                      // Adjust the index for the remaining scoreboard items
+                      final adjustedIndex =
+                          _currentUserData != null ? index - 1 : index;
+                      final user = _scoreboard[adjustedIndex];
+                      final position = user['position'] != null
+                          ? user['position'] -
+                              1 // Use position from API if available
+                          : adjustedIndex; // Fallback to index
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _buildUserItem(user, position, false),
                       );
                     },
                   ),
                 ),
     );
+  }
+
+// Helper method to build user item
+  Widget _buildUserItem(
+      Map<String, dynamic> user, int position, bool isCurrentUser) {
+    final isTopThree = position < 3;
+    final displayPosition = user['position'] ?? (position + 1);
+
+    return GestureDetector(
+      onTap: () {
+        if (!isCurrentUser) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ProfilePage(
+                email: user['emailUser'],
+              ),
+            ),
+          );
+        }
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: isCurrentUser ? Colors.blue.withOpacity(0.1) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: isCurrentUser
+              ? Border.all(color: Colors.blue.withOpacity(0.3), width: 1.5)
+              : null,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  image: DecorationImage(
+                    image: NetworkImage(user['profileImageUrl']),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user['userName'],
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: isCurrentUser ? Colors.blue[800] : Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${user['point']} points',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color:
+                            isCurrentUser ? Colors.blue[600] : Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: isCurrentUser
+                      ? Colors.blue
+                      : (isTopThree
+                          ? _getRankColor(position)
+                          : Colors.grey[100]),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    '#$displayPosition',
+                    style: TextStyle(
+                      color: isCurrentUser || isTopThree
+                          ? Colors.white
+                          : Colors.grey[600],
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Color _getRankColor(int index) {
+    switch (index) {
+      case 0:
+        return Colors.amber; // Gold for 1st place
+      case 1:
+        return Color(0xFFC0C0C0); // Silver for 2nd place
+      case 2:
+        return Color(0xFFCD7F32); // Bronze for 3rd place
+      default:
+        return Colors.grey.shade400;
+    }
   }
 
   Future<void> _handleRefresh() async {
@@ -277,19 +366,6 @@ class _ScoreboardPageState extends State<ScoreboardPage> {
           ),
         );
       }
-    }
-  }
-
-  Color _getRankColor(int index) {
-    switch (index) {
-      case 0:
-        return const Color(0xFFFFD700); // Gold
-      case 1:
-        return const Color(0xFFC0C0C0); // Silver
-      case 2:
-        return const Color(0xFFCD7F32); // Bronze
-      default:
-        return Colors.grey;
     }
   }
 }

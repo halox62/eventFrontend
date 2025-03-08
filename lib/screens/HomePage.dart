@@ -76,32 +76,28 @@ class _HomepageState extends State<Homepage> {
   @override
   void initState() {
     super.initState();
-    //if (count == 0) {
     _initializeData(true);
-    //}
   }
 
   Future<void> _initializeData(bool loading) async {
-    //count++;
     SharedPreferences prefs = await SharedPreferences.getInstance();
     token = prefs.getString('jwtToken');
     userEmail = prefs.getString('email');
 
     try {
-      if (loading) {
-        showLoadingDialog("Loading");
-      }
-
       if (token != null) {
+        if (loading) {
+          showLoadingDialog("Loading");
+        }
         await fetchProfileData();
         await fetchImages();
         Navigator.of(_dialogContext).pop();
       } else {
-        if (mounted) {
-          setState(() {
-            isLoading = false;
-          });
-        }
+        prefs.clear();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const AuthPage()),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -178,6 +174,8 @@ class _HomepageState extends State<Homepage> {
           _initializeData(false);
         } else {
           await Auth().signOut();
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          prefs.clear();
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const AuthPage()),
@@ -185,6 +183,8 @@ class _HomepageState extends State<Homepage> {
         }
       } catch (e) {
         await Auth().signOut();
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        prefs.clear();
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const AuthPage()),
@@ -195,6 +195,8 @@ class _HomepageState extends State<Homepage> {
 
   Future<void> signOut() async {
     await Auth().signOut();
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.clear();
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => const AuthPage()),
@@ -1408,6 +1410,7 @@ class _HomepageState extends State<Homepage> {
   }
 
   Future<void> searchProfiles(String query) async {
+    _searchController.clear();
     String apiUrl = "https://$host/search_profiles";
 
     try {
@@ -1445,37 +1448,69 @@ class _HomepageState extends State<Homepage> {
       context: context,
       builder: (BuildContext context) {
         return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16), // Bordo arrotondato
+          ),
           insetPadding:
               const EdgeInsets.symmetric(horizontal: 20, vertical: 50),
-          child: SizedBox(
-            width: double.infinity,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 10,
+                  spreadRadius: 2,
+                  offset: Offset(0, 5),
+                ),
+              ],
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Titolo
+                // Titolo con divider
                 const Padding(
-                  padding: EdgeInsets.all(16.0),
+                  padding: EdgeInsets.symmetric(vertical: 8),
                   child: Text(
-                    'Risultati della ricerca',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    'Profili',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-                // Risultati
-                Expanded(
+                const Divider(),
+
+                // Lista dei risultati
+                SizedBox(
+                  height: 300, // Altezza fissa per evitare problemi di overflow
                   child: ListView.builder(
-                    shrinkWrap: true,
                     itemCount: profiles.length,
                     itemBuilder: (context, index) {
                       return ListTile(
                         leading: CircleAvatar(
-                          backgroundImage: images.isNotEmpty
+                          radius: 24,
+                          backgroundColor: Colors.grey[300],
+                          backgroundImage: (images.isNotEmpty &&
+                                  images[index] != null &&
+                                  images[index].isNotEmpty)
                               ? NetworkImage(images[index])
                               : null,
-                          child:
-                              images.isEmpty ? const Icon(Icons.person) : null,
+                          child: (images.isEmpty ||
+                                  images[index] == null ||
+                                  images[index].isEmpty)
+                              ? const Icon(Icons.person, color: Colors.white)
+                              : null,
                         ),
-                        title: Text(profiles[index]),
+                        title: Text(
+                          profiles[index],
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w500),
+                        ),
+                        trailing: const Icon(Icons.arrow_forward_ios,
+                            size: 16, color: Colors.grey),
                         onTap: () {
                           Navigator.push(
                             context,
@@ -1489,17 +1524,19 @@ class _HomepageState extends State<Homepage> {
                     },
                   ),
                 ),
+
+                const Divider(),
+
                 // Pulsante Chiudi
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      child: const Text('Chiudi'),
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                      },
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.blue,
+                      textStyle: const TextStyle(fontSize: 16),
                     ),
+                    child: const Text('Chiudi'),
                   ),
                 ),
               ],
@@ -1676,45 +1713,115 @@ class _HomepageState extends State<Homepage> {
                             Hero(
                               tag: 'profile-image',
                               child: Container(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color:
-                                          colorScheme.shadow.withOpacity(0.1),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color:
+                                            colorScheme.shadow.withOpacity(0.1),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: GestureDetector(
+                                    /*onLongPress: () {
+                                      // Mostra un dialogo o un bottom sheet per cambiare la foto
+                                      showModalBottomSheet(
+                                        context: context,
+                                        builder: (context) => Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            ListTile(
+                                              leading: Icon(Icons.photo_camera),
+                                              title: Text('Scatta una foto'),
+                                              onTap: () {
+                                                // Logica per scattare una foto
+                                                Navigator.pop(context);
+                                              },
+                                            ),
+                                            ListTile(
+                                              leading:
+                                                  Icon(Icons.photo_library),
+                                              title:
+                                                  Text('Scegli dalla galleria'),
+                                              onTap: () {
+                                                // Logica per scegliere dalla galleria
+                                                Navigator.pop(context);
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },*/
+                                    child: CircleAvatar(
+                                      radius: 40,
+                                      backgroundColor:
+                                          colorScheme.surfaceContainerHighest,
+                                      backgroundImage: profileImageUrl != null
+                                          ? NetworkImage(profileImageUrl!)
+                                          : null,
+                                      child: profileImageUrl == null
+                                          ? Icon(Icons.person,
+                                              size: 40,
+                                              color:
+                                                  colorScheme.onSurfaceVariant)
+                                          : null,
                                     ),
-                                  ],
-                                ),
-                                child: CircleAvatar(
-                                  radius: 40,
-                                  backgroundColor:
-                                      colorScheme.surfaceContainerHighest,
-                                  backgroundImage: profileImageUrl != null
-                                      ? NetworkImage(profileImageUrl!)
-                                      : null,
-                                  child: profileImageUrl == null
-                                      ? Icon(Icons.person,
-                                          size: 40,
-                                          color: colorScheme.onSurfaceVariant)
-                                      : null,
-                                ),
-                              ),
+                                  )),
                             ),
                             const SizedBox(width: 20),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    userName ?? 'Unknown User',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleLarge
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                  GestureDetector(
+                                    /*onLongPress: () {
+                                      // Show dialog to edit username
+                                      showDialog(
+                                        context: context,
+                                        builder: (BuildContext context) {
+                                          String newUsername =
+                                              userName ?? 'Unknown User';
+                                          return AlertDialog(
+                                            title: Text(
+                                                'Vuoi modificare il tuo username'),
+                                            content: TextField(
+                                              autofocus: true,
+                                              controller: TextEditingController(
+                                                  text: newUsername),
+                                              onChanged: (value) {
+                                                newUsername = value;
+                                              },
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () {
+                                                  Navigator.pop(context);
+                                                },
+                                                child: Text('Cancel'),
+                                              ),
+                                              TextButton(
+                                                onPressed: () {
+                                                  updateUsername(newUsername);
+                                                  Navigator.pop(context);
+                                                },
+                                                child: Text('Save'),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      );
+                                    },*/
+                                    child: Text(
+                                      userName ?? 'Unknown User',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleLarge
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    ),
                                   ),
                                   Row(
                                     children: [
@@ -2129,6 +2236,35 @@ class _HomepageState extends State<Homepage> {
     }
   }
 
+  Future<void> updateUsername(String newUsername) async {
+    final uri = Uri.parse('https://$host/update_username');
+
+    final response = await http.post(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'newUserName': newUsername}),
+    );
+
+    if (response.statusCode == 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Nome modificato con successo'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Nome non modificato'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   Future<void> _showDeleteDialog(BuildContext context, int index) async {
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -2162,9 +2298,8 @@ class _HomepageState extends State<Homepage> {
                   Navigator.of(_dialogContext).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: const Text('Foto eliminata con successo'),
-                      backgroundColor: colorScheme.primaryContainer,
-                      behavior: SnackBarBehavior.floating,
+                      content: Text('Foto eliminata con successo'),
+                      backgroundColor: Colors.green,
                     ),
                   );
                 }

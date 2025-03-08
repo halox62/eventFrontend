@@ -281,6 +281,8 @@ class EventPage extends State<EventPageControl> {
           _initializeEventPhotos(false);
         } else {
           await Auth().signOut();
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          prefs.clear();
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const AuthPage()),
@@ -288,6 +290,8 @@ class EventPage extends State<EventPageControl> {
         }
       } catch (e) {
         await Auth().signOut();
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        prefs.clear();
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const AuthPage()),

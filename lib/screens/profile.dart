@@ -53,6 +53,8 @@ class _ProfilePageState extends State<ProfilePage> {
           _initializeData();
         } else {
           await Auth().signOut();
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          prefs.clear();
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const AuthPage()),
@@ -60,6 +62,8 @@ class _ProfilePageState extends State<ProfilePage> {
         }
       } catch (e) {
         await Auth().signOut();
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        prefs.clear();
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const AuthPage()),

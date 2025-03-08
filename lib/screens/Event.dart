@@ -42,9 +42,7 @@ class _EventCalendarState extends State<EventCalendar> {
   @override
   void initState() {
     super.initState();
-    if (count == 0) {
-      _initializePageEvent(true);
-    }
+    _initializePageEvent(true);
   }
 
   void showLoadingDialog(String message) {
@@ -74,7 +72,6 @@ class _EventCalendarState extends State<EventCalendar> {
   }
 
   Future<void> _initializePageEvent(bool loading) async {
-    count++;
     try {
       if (loading) {
         showLoadingDialog("Caricamento Eventi");
@@ -186,6 +183,8 @@ class _EventCalendarState extends State<EventCalendar> {
           _initializePageEvent(false);
         } else {
           await Auth().signOut();
+          SharedPreferences prefs = await SharedPreferences.getInstance();
+          prefs.clear();
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => const AuthPage()),
@@ -193,6 +192,8 @@ class _EventCalendarState extends State<EventCalendar> {
         }
       } catch (e) {
         await Auth().signOut();
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        prefs.clear();
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const AuthPage()),

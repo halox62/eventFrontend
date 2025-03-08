@@ -25,8 +25,8 @@ class _AuthPageState extends State<AuthPage> {
   File? _profileImage;
   bool isLogin = true;
   bool _isPasswordVisible = false;
-  //String host = "event-production.up.railway.app";
-  final String host = "event-fit.it";
+  String host = "event-production.up.railway.app";
+  //final String host = "event-fit.it";
   bool _isLoading = false;
 
   @override
@@ -37,12 +37,51 @@ class _AuthPageState extends State<AuthPage> {
     super.dispose();
   }
 
+  Future<bool> search(String email) async {
+    try {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('https://$host/search'),
+      );
+      request.fields['email'] = email;
+
+      final response = await request.send();
+
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        throw Exception('Login failed');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Account non presente'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+
+    return false;
+  }
+
   Future<void> signIn() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
     try {
+      bool response = await search(_email.text);
+      if (!response) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Registration failed. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        throw Exception('Registration failed');
+      }
       await Auth().signInWithEmailAndPassword(
         email: _email.text,
         password: _password.text,
@@ -63,9 +102,13 @@ class _AuthPageState extends State<AuthPage> {
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
+        String errorMessage =
+            e.toString().replaceFirst(RegExp(r'\[.*?\] '), '');
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.message ?? 'Authentication failed'),
+            content:
+                Text('Registration failed. Please try again. $errorMessage'),
             backgroundColor: Colors.red,
           ),
         );
@@ -81,15 +124,13 @@ class _AuthPageState extends State<AuthPage> {
     setState(() => _isLoading = true);
 
     try {
-      await Auth().createUserWithEmailAndPassword(
-        email: _email.text,
-        password: _password.text,
-      );
-
       var request = http.MultipartRequest(
         'POST',
         Uri.parse('https://$host/register'),
       );
+
+      String email = _email.text;
+      String password = _password.text;
 
       request.fields['email'] = _email.text;
       request.fields['userName'] = _userName.text;
@@ -106,6 +147,10 @@ class _AuthPageState extends State<AuthPage> {
       final response = await request.send();
 
       if (response.statusCode == 200) {
+        await Auth().createUserWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('email', _email.text);
 
@@ -124,9 +169,13 @@ class _AuthPageState extends State<AuthPage> {
       }
     } catch (e) {
       if (mounted) {
+        String errorMessage =
+            e.toString().replaceFirst(RegExp(r'\[.*?\] '), '');
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Registration failed. Please try again.'),
+          SnackBar(
+            content:
+                Text('Registration failed. Please try again. $errorMessage'),
             backgroundColor: Colors.red,
           ),
         );
