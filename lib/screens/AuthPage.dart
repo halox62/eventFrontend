@@ -142,6 +142,14 @@ class _AuthPageState extends State<AuthPage> {
             _profileImage!.path,
           ),
         );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Attenzione manca la foto profilo'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
       }
 
       final response = await request.send();

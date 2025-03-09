@@ -66,7 +66,6 @@ class _HomepageState extends State<Homepage> {
   late List<dynamic> imagesListSearch;
   late List<dynamic> emailsListSearch;
   bool isLoading = true;
-  int count = 0;
   String id = "-1";
 
   int? enlargedImageIndex;
@@ -80,25 +79,24 @@ class _HomepageState extends State<Homepage> {
   }
 
   Future<void> _initializeData(bool loading) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    token = prefs.getString('jwtToken');
-    userEmail = prefs.getString('email');
-
     try {
-      if (token != null) {
-        if (loading) {
-          showLoadingDialog("Loading");
-        }
-        await fetchProfileData();
-        await fetchImages();
-        Navigator.of(_dialogContext).pop();
-      } else {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      token = prefs.getString('jwtToken');
+      userEmail = prefs.getString('email');
+      //if (token != null) {
+      if (loading) {
+        showLoadingDialog("Loading");
+      }
+      await fetchProfileData();
+      await fetchImages();
+      Navigator.of(_dialogContext).pop();
+      /* } else {
         prefs.clear();
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const AuthPage()),
         );
-      }
+      }*/
     } catch (e) {
       if (mounted) {
         Navigator.of(_dialogContext).pop();
@@ -268,12 +266,20 @@ class _HomepageState extends State<Homepage> {
   }
 
   Future<File?> takePicture() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.camera);
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: ImageSource.camera);
 
-    if (pickedFile != null) {
-      return File(pickedFile.path);
-    } else {
+      if (pickedFile != null) {
+        return File(pickedFile.path);
+      } else {
+        return null;
+      }
+    } catch (e) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const Homepage()),
+      );
       return null;
     }
   }
@@ -326,7 +332,6 @@ class _HomepageState extends State<Homepage> {
         return CodeEventList;
       } else {
         _checkTokenValidity(response.statusCode);
-        print('Failed to load dates: ${response.statusCode}');
       }
     } catch (e) {
       print('Error: $e');
@@ -588,33 +593,61 @@ class _HomepageState extends State<Homepage> {
   void _showUploadSuccess(BuildContext context, bool withEvent) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            width: 300,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            content: Row(
-              children: [
-                const Icon(
-                  Icons.check_circle_outline,
-                  color: Colors.white,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  withEvent
-                      ? 'Foto caricata nell\'evento con successo!'
-                      : 'Foto caricata con successo',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
+        // Chiude qualsiasi SnackBar correntemente visualizzato
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+        // Crea un overlay che scende dall'alto
+        final overlay = OverlayEntry(
+          builder: (context) => Positioned(
+            top: MediaQuery.of(context).padding.top +
+                10, // Posizione dall'alto con spazio per la status bar
+            left: 0,
+            right: 0,
+            child: Material(
+              color: Colors.transparent,
+              child: Center(
+                child: Container(
+                  width: 300,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.green,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.check_circle_outline,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 12),
+                      Flexible(
+                        child: Text(
+                          withEvent
+                              ? 'Foto caricata nell\'evento con successo!'
+                              : 'Foto caricata con successo',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         );
+
+        // Inserisce l'overlay
+        Overlay.of(context).insert(overlay);
+
+        // Rimuove l'overlay dopo 3 secondi
+        Future.delayed(const Duration(seconds: 3), () {
+          overlay.remove();
+        });
       }
     });
   }
@@ -752,14 +785,11 @@ class _HomepageState extends State<Homepage> {
       var response = await request.send();
 
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Dettagli caricati con successo')),
-        );
+        _showTopSnackBar(context, 'Dettagli caricati con successo',
+            isSuccess: true);
       } else {
         _checkTokenValidity(response.statusCode);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Errore nei Dettagli')),
-        );
+        _showTopSnackBar(context, 'Errore nei Dettagli', isSuccess: false);
         _showOutfitDetailsSheet(id);
       }
     } catch (e) {
@@ -767,22 +797,77 @@ class _HomepageState extends State<Homepage> {
     }
   }
 
+  void _showTopSnackBar(BuildContext context, String message,
+      {bool isSuccess = true}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (context.mounted) {
+        // Chiude qualsiasi overlay correntemente visualizzato
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+        // Crea un overlay che scende dall'alto
+        final overlay = OverlayEntry(
+          builder: (context) => Positioned(
+            top: MediaQuery.of(context).padding.top + 10,
+            left: 0,
+            right: 0,
+            child: Material(
+              color: Colors.transparent,
+              child: Center(
+                child: Container(
+                  width: 300,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: isSuccess ? Colors.green : Colors.red,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isSuccess
+                            ? Icons.check_circle_outline
+                            : Icons.error_outline,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 12),
+                      Flexible(
+                        child: Text(
+                          message,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        // Inserisce l'overlay
+        Overlay.of(context).insert(overlay);
+
+        // Rimuove l'overlay dopo 3 secondi
+        Future.delayed(const Duration(seconds: 3), () {
+          if (overlay.mounted) {
+            overlay.remove();
+          }
+        });
+      }
+    });
+  }
+
   Future<void> _uploadAllItems(
       Map<String, Map<String, String>> itemsDetails, String id) async {
+    String item = "";
     try {
-      // Mostra un indicatore di caricamento
-      /*showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
-        },
-      );*/
-
       // Carica ogni item
       for (var entry in itemsDetails.entries) {
+        item = entry.key;
         await uploadDetails(
           id,
           entry.value['store'] ?? '', // brand
@@ -792,21 +877,17 @@ class _HomepageState extends State<Homepage> {
         );
       }
 
-      // Chiudi l'indicatore di caricamento
-      //Navigator.pop(context);
-
       // Mostra un messaggio di successo
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
             content: Text('Tutti i capi sono stati caricati con successo')),
       );
     } catch (e) {
-      // Chiudi l'indicatore di caricamento in caso di errore
-      //Navigator.pop(context);
-
       // Mostra l'errore
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Errore durante il caricamento: $e')),
+        SnackBar(
+            content:
+                Text('Errore durante il caricamento dei dettagli per $item')),
       );
     }
   }
@@ -840,7 +921,9 @@ class _HomepageState extends State<Homepage> {
                     onTap: () async {
                       Navigator.pop(context);
                       id = await _processGalleryImage();
-                      _showOutfitDetailsSheet(id);
+                      if (id != "-1") {
+                        _showOutfitDetailsSheet(id);
+                      }
                     },
                   ),
                   _buildOptionButton(
@@ -850,7 +933,9 @@ class _HomepageState extends State<Homepage> {
                     onTap: () async {
                       Navigator.pop(context);
                       id = await _processCameraImage();
-                      _showOutfitDetailsSheet(id);
+                      if (id != "-1") {
+                        _showOutfitDetailsSheet(id);
+                      }
                     },
                   ),
                 ],
@@ -1281,6 +1366,10 @@ class _HomepageState extends State<Homepage> {
     } catch (e) {
       Navigator.of(_dialogContext).pop();
       _showErrorDialog("Si è verificato un errore con la galleria: $e");
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const Homepage()),
+      );
     }
     return id;
   }
@@ -1323,11 +1412,14 @@ class _HomepageState extends State<Homepage> {
         setState(() {
           images.clear();
           ids.clear();
-          for (var image in data['images']) {
-            images.add(image['url']);
-            ids.add(image['id'].toString());
-            points.add(image['point'].toString());
-          }
+          points.clear();
+          setState(() {
+            for (var image in data['images']) {
+              images.add(image['url']);
+              ids.add(image['id'].toString());
+              points.add(image['point'].toString());
+            }
+          });
         });
       } else {
         _checkTokenValidity(response.statusCode);
@@ -1388,15 +1480,21 @@ class _HomepageState extends State<Homepage> {
           images.remove(photoUrl);
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Foto eliminata con successo')),
+          SnackBar(
+            content: Text('Foto eliminata con successo'),
+            backgroundColor: Colors.green,
+          ),
         );
         await _initializeData(true);
         return true;
       } else {
         _checkTokenValidity(response.statusCode);
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Errore: impossibile eliminare la foto')),
+          SnackBar(
+            content: Text('Errore: impossibile eliminare la foto'),
+            backgroundColor: Colors.red,
+          ),
         );
         return false;
       }
@@ -1434,12 +1532,11 @@ class _HomepageState extends State<Homepage> {
             emailsListSearch, profilesListSearch, imagesListSearch);
       } else {
         _checkTokenValidity(response.statusCode);
-        print("Errore API: ${response.statusCode}");
-        throw Exception("Errore durante la ricerca: ${response.body}");
+
+        throw Exception("Errore durante la ricerca");
       }
     } catch (e) {
-      print("Errore durante la chiamata API: $e");
-      throw Exception("Impossibile connettersi all'API.");
+      throw Exception("Errore di connessione");
     }
   }
 
