@@ -7,6 +7,25 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:1098918583524:android:c67a67528bfef742c560f1",
+        "android_client_info": {
+          "package_name": "com.eventFit"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAt8zi4sxqMkRJYqSq872dNmNmywp09hNM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:1098918583524:android:270380538bdcd3a8c560f1",
         "android_client_info": {
           "package_name": "com.example.social_flutter_giorgio"

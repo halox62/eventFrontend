@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -267,6 +266,23 @@ class _HomepageState extends State<Homepage> {
 
   Future<File?> takePicture() async {
     try {
+      var status = await Permission.camera.status;
+
+      if (!status.isGranted) {
+        if (mounted && _dialogContext != null) {
+          Navigator.of(_dialogContext).pop();
+        }
+
+        status = await Permission.camera.request();
+
+        if (!status.isGranted) {
+          if (mounted) {
+            showDialogPermissionDenied();
+          }
+          return null;
+        }
+      }
+
       final picker = ImagePicker();
       final pickedFile = await picker.pickImage(source: ImageSource.camera);
 
@@ -276,12 +292,29 @@ class _HomepageState extends State<Homepage> {
         return null;
       }
     } catch (e) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const Homepage()),
-      );
-      return null;
+      throw e;
     }
+  }
+
+  void showDialogPermissionDenied() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text("Permesso Fotocamera"),
+        content: const Text(
+            "Per utilizzare questa funzione è necessario concedere i permessi della fotocamera."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text("Annulla"),
+          ),
+          TextButton(
+            onPressed: () => openAppSettings(),
+            child: const Text("Apri Impostazioni"),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<String> uploadImage(File imageFile) async {
@@ -1336,42 +1369,88 @@ class _HomepageState extends State<Homepage> {
 
   Future<String> _processCameraImage() async {
     try {
-      showLoadingDialog("Apertura fotocamera...");
-      final image = await takePicture();
-      Navigator.of(_dialogContext).pop();
+      var status = await Permission.camera.status;
 
-      if (image != null) {
+      if (!status.isGranted) {
+        status = await Permission.camera.request();
+
+        if (!status.isGranted) {
+          if (mounted) {
+            showDialogPermissionDenied();
+          }
+          return id;
+        }
+      }
+
+      if (mounted) {
+        showLoadingDialog("Apertura fotocamera...");
+      }
+
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: ImageSource.camera);
+
+      if (mounted && _dialogContext != null) {
+        Navigator.of(_dialogContext).pop();
+      }
+      if (pickedFile != null) {
+        File image = File(pickedFile.path);
         return await _processSelectedImage(image);
       } else {
         return id;
       }
     } catch (e) {
-      Navigator.of(_dialogContext).pop();
-      _showErrorDialog("Si è verificato un errore con la fotocamera: $e");
+      if (mounted && _dialogContext != null) {
+        try {
+          Navigator.of(_dialogContext).pop();
+        } catch (navError) {
+          print("Errore nel chiudere il dialogo: $navError");
+        }
+      }
+
+      if (mounted) {
+        _showErrorDialog(
+            "Si è verificato un errore con la fotocamera: ${e.toString()}");
+      }
+
       return id;
     }
   }
 
   Future<String> _processGalleryImage() async {
+    bool isDialogOpen = false;
+
     try {
+      isDialogOpen = true;
       showLoadingDialog("Apertura galleria...");
       final picker = ImagePicker();
       final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-      Navigator.of(_dialogContext).pop();
 
+      if (isDialogOpen) {
+        Navigator.of(_dialogContext).pop();
+        isDialogOpen = false;
+      }
       if (pickedFile != null) {
         File image = File(pickedFile.path);
-        id = await _processSelectedImage(image);
+        return await _processSelectedImage(image);
+      } else {
+        return id;
       }
     } catch (e) {
-      Navigator.of(_dialogContext).pop();
-      _showErrorDialog("Si è verificato un errore con la galleria: $e");
+      if (isDialogOpen) {
+        Navigator.of(_dialogContext).pop();
+        isDialogOpen = false;
+      }
+
+      _showErrorDialog(
+          "Si è verificato un errore con la galleria: ${e.toString()}");
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const Homepage()),
       );
+
+      return id;
     }
-    return id;
   }
 
   Future<String> _processSelectedImage(File image) async {

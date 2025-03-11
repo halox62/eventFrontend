@@ -937,14 +937,14 @@ class _EventCalendarState extends State<EventCalendar> {
                   icon: const Icon(
                     Icons.qr_code_scanner,
                     size: 24,
-                    color: Colors.black,
+                    color: Colors.white,
                   ),
                   label: const Text(
                     'Scansiona QR Code',
                     style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black),
+                        color: Colors.white),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -1005,7 +1005,7 @@ class _EventCalendarState extends State<EventCalendar> {
                       child: const Text(
                         'Annulla',
                         style: TextStyle(
-                          color: Colors.black, // Changed to green
+                          color: Color.fromARGB(255, 223, 91, 91),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -1040,7 +1040,7 @@ class _EventCalendarState extends State<EventCalendar> {
                       child: const Text(
                         'Conferma',
                         style: TextStyle(
-                          color: Colors.black,
+                          color: Colors.white,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
