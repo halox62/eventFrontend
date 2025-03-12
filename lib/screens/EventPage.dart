@@ -27,7 +27,7 @@ class EventPage extends State<EventPageControl> {
   Map<int, String> userPhotos = {};
   Map<int, bool> likedPhotos = {};
   List<dynamic> rankedPhotos = [];
-  List<String> points = [];
+  Map<int, String> points = {};
   double? eventLatitude;
   double? eventLongitude;
   int? enlargedImageIndex;
@@ -554,31 +554,39 @@ class EventPage extends State<EventPageControl> {
       'code': widget.eventCode,
     });
 
-    final response = await http.post(
-      url,
-      headers: headers,
-      body: body,
-    );
+    try {
+      final response = await http.post(
+        url,
+        headers: headers,
+        body: body,
+      );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-
-      setState(() {
-        eventPhotos = List<Map<String, dynamic>>.from(data);
-        print(eventPhotos);
-        likedPhotos = {};
-        for (int i = 0; i < eventPhotos.length; i++) {
-          likedPhotos[i] = false;
-          final photoData = eventPhotos[i];
-          usernamePhotos[i] = photoData['name'] ?? 'Unknown';
-          profileImages[i] = photoData['image_profile'] ?? 'Unknown';
-          userPhotos[i] = photoData['email'] ?? 'Unknown';
-          points[i] = photoData['point'] ?? '0';
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data != null && data is List && data.isNotEmpty) {
+          setState(() {
+            eventPhotos = List<Map<String, dynamic>>.from(data);
+            likedPhotos = {};
+            for (int i = 0; i < eventPhotos.length; i++) {
+              likedPhotos[i] = false;
+              final photoData = eventPhotos[i];
+              usernamePhotos[i] = photoData['name'] ?? 'Unknown';
+              profileImages[i] = photoData['image_profile'] ?? 'Unknown';
+              userPhotos[i] = photoData['email'] ?? 'Unknown';
+              points[i] = photoData['point']?.toString() ?? '0';
+            }
+          });
+        } else {
+          setState(() {
+            eventPhotos = [];
+          });
         }
-      });
-    } else {
-      _checkTokenValidity(response.statusCode);
-      throw Exception('Failed to load event photos');
+      } else {
+        _checkTokenValidity(response.statusCode);
+        throw Exception('Failed to load event photos: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Exception in _loadEventPhotos: $e');
     }
   }
 
@@ -1233,10 +1241,7 @@ class EventPage extends State<EventPageControl> {
           'Authorization': 'Bearer $token',
         },
       );
-
-      // Controlla lo status code
       if (response.statusCode == 201 || response.statusCode == 200) {
-        // Decodifica la risposta per mostrare un messaggio più specifico
         final Map<String, dynamic> data = jsonDecode(response.body);
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1246,10 +1251,7 @@ class EventPage extends State<EventPageControl> {
           ),
         );
       } else {
-        // Controlla se è un problema di token
         _checkTokenValidity(response.statusCode);
-
-        // Mostra errore specifico se disponibile nella risposta
         try {
           final Map<String, dynamic> errorData = jsonDecode(response.body);
           throw Exception(
@@ -1260,9 +1262,6 @@ class EventPage extends State<EventPageControl> {
         }
       }
     } catch (e) {
-      // Registra l'errore e mostra un messaggio all'utente
-      print("Errore durante la chiamata API: $e");
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Impossibile salvare la foto. Riprova più tardi.'),

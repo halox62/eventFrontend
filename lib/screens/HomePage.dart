@@ -82,20 +82,18 @@ class _HomepageState extends State<Homepage> {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       token = prefs.getString('jwtToken');
       userEmail = prefs.getString('email');
-      //if (token != null) {
+      if (token == null || userEmail == null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const AuthPage()),
+        );
+      }
       if (loading) {
         showLoadingDialog("Loading");
       }
       await fetchProfileData();
       await fetchImages();
       Navigator.of(_dialogContext).pop();
-      /* } else {
-        prefs.clear();
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const AuthPage()),
-        );
-      }*/
     } catch (e) {
       if (mounted) {
         Navigator.of(_dialogContext).pop();
@@ -269,7 +267,7 @@ class _HomepageState extends State<Homepage> {
       var status = await Permission.camera.status;
 
       if (!status.isGranted) {
-        if (mounted && _dialogContext != null) {
+        if (mounted) {
           Navigator.of(_dialogContext).pop();
         }
 
@@ -292,7 +290,7 @@ class _HomepageState extends State<Homepage> {
         return null;
       }
     } catch (e) {
-      throw e;
+      rethrow;
     }
   }
 
@@ -306,11 +304,17 @@ class _HomepageState extends State<Homepage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text("Annulla"),
+            child: const Text(
+              "Annulla",
+              style: TextStyle(color: Colors.black),
+            ),
           ),
           TextButton(
             onPressed: () => openAppSettings(),
-            child: const Text("Apri Impostazioni"),
+            child: const Text(
+              "Apri Impostazioni",
+              style: TextStyle(color: Colors.black),
+            ),
           ),
         ],
       ),
@@ -337,8 +341,12 @@ class _HomepageState extends State<Homepage> {
       final responseBody = await response.stream.bytesToString();
       Map<String, dynamic> jsonResponse = json.decode(responseBody);
       await _initializeData(true);
+      if (context.mounted) {
+        _showUploadSuccess(context, false);
+      }
       return jsonResponse['id'].toString();
     } else {
+      _showErrorDialog("Foto non caricata");
       _checkTokenValidity(response.statusCode);
       return "-1";
     }
@@ -782,12 +790,22 @@ class _HomepageState extends State<Homepage> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Errore'),
-        content: Text(message),
+        title: const Text(
+          'Errore',
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: Colors.red,
+        content: Text(
+          message,
+          style: TextStyle(color: Colors.white),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
+            child: const Text(
+              'OK',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -1389,7 +1407,7 @@ class _HomepageState extends State<Homepage> {
       final picker = ImagePicker();
       final pickedFile = await picker.pickImage(source: ImageSource.camera);
 
-      if (mounted && _dialogContext != null) {
+      if (mounted) {
         Navigator.of(_dialogContext).pop();
       }
       if (pickedFile != null) {
@@ -1399,7 +1417,7 @@ class _HomepageState extends State<Homepage> {
         return id;
       }
     } catch (e) {
-      if (mounted && _dialogContext != null) {
+      if (mounted) {
         try {
           Navigator.of(_dialogContext).pop();
         } catch (navError) {
@@ -1408,8 +1426,7 @@ class _HomepageState extends State<Homepage> {
       }
 
       if (mounted) {
-        _showErrorDialog(
-            "Si è verificato un errore con la fotocamera: ${e.toString()}");
+        _showErrorDialog("Si è verificato un errore con la fotocamera");
       }
 
       return id;
@@ -1835,7 +1852,7 @@ class _HomepageState extends State<Homepage> {
             leading: const Icon(Icons.public_outlined),
             title: const Text('Connect'),
             onTap: () {
-              Navigator.pop(context); // Chiude il drawer
+              Navigator.pop(context);
               if (userEmail != null) {
                 showDialog(
                   context: context,
