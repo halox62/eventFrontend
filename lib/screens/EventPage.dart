@@ -996,10 +996,8 @@ class EventPage extends State<EventPageControl> {
                             ),
                           ),
                         ),
-                        Positioned(
-                          top: 360,
-                          right: 8,
-                          left: 8,
+                        Padding(
+                          padding: const EdgeInsets.all(12),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -1023,8 +1021,7 @@ class EventPage extends State<EventPageControl> {
                                 ],
                               ),
                               Row(
-                                mainAxisSize: MainAxisSize
-                                    .min, // Mantiene gli elementi compatti
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   // Pulsante Preferito
                                   Material(

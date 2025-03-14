@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -346,7 +347,7 @@ class _HomepageState extends State<Homepage> {
       }
       return jsonResponse['id'].toString();
     } else {
-      _showErrorDialog("Foto non caricata");
+      _showErrorSnackbar("Foto non caricata");
       _checkTokenValidity(response.statusCode);
       return "-1";
     }
@@ -380,8 +381,7 @@ class _HomepageState extends State<Homepage> {
     return null;
   }
 
-  Future<void> uploadImageForEvent(String eventCode, String eventName) async {
-    String message = "Errore caricamento";
+  Future<String> uploadImageForEvent(String eventCode, String eventName) async {
     double latitudine;
     double longitudine;
 
@@ -414,25 +414,83 @@ class _HomepageState extends State<Homepage> {
         ));
 
         var response = await request.send();
-
         if (response.statusCode == 200) {
+          final responseBody = await response.stream.bytesToString();
+          Map<String, dynamic> jsonResponse = json.decode(responseBody);
           await _initializeData(true);
-          message = 'Foto caricata per l\'evento $eventName';
-        } else {
-          _checkTokenValidity(response.statusCode);
-          if (response.statusCode == 403) {
-            message = "Foto non caricata sei troppo lontano dall'evento";
+          if (context.mounted) {
+            _showUploadSuccess(context, false);
           }
+          return jsonResponse['id'].toString();
+        } else {
+          if (response.statusCode == 403) {
+            _showErrorSnackbar(
+                "Foto non caricata sei troppo lontano dall'evento");
+          } else {
+            _checkTokenValidity(response.statusCode);
+          }
+          return "-1";
         }
       }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
     } else if (permission.isDenied) {
     } else if (permission.isPermanentlyDenied) {
       openAppSettings();
     }
+    return "-1";
+  }
+
+  void _showErrorSnackbar(String message) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Crea un overlay che scende dall'alto
+      final overlay = OverlayEntry(
+        builder: (context) => Positioned(
+          top: MediaQuery.of(context).padding.top + 10,
+          left: 0,
+          right: 0,
+          child: Material(
+            color: Colors.transparent,
+            child: Center(
+              child: Container(
+                width: 300,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: Text(
+                        message,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Inserisce l'overlay
+      Overlay.of(context).insert(overlay);
+
+      // Rimuove l'overlay dopo 3 secondi
+      Future.delayed(const Duration(seconds: 3), () {
+        overlay.remove();
+      });
+    });
   }
 
   Future<String> getEventName(String eventCode) async {
@@ -460,11 +518,13 @@ class _HomepageState extends State<Homepage> {
     }
   }
 
-  void showEventsDialog(List<dynamic> events) {
-    final rootContext = context;
-    showDialog(
+  Future<String> showEventsDialog(List<dynamic> events) async {
+    final completer = Completer<String>();
+
+    await showDialog(
       context: context,
-      builder: (BuildContext context) {
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
         return Dialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -483,13 +543,20 @@ class _HomepageState extends State<Homepage> {
                   children: [
                     Text(
                       'Seleziona un evento',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      style: Theme.of(dialogContext)
+                          .textTheme
+                          .titleLarge
+                          ?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: () {
+                        Navigator.of(dialogContext).pop();
+                        completer.complete(
+                            "-1"); // Complete with error code if closed
+                      },
                     ),
                   ],
                 ),
@@ -514,11 +581,27 @@ class _HomepageState extends State<Homepage> {
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(12),
                                     onTap: () async {
+                                      Navigator.of(dialogContext)
+                                          .pop(); // Close events dialog first
+
                                       showLoadingDialog("Loading");
-                                      await uploadImageForEvent(
+                                      final result = await uploadImageForEvent(
                                           events[i], eventName);
-                                      Navigator.of(context).pop();
-                                      Navigator.of(_dialogContext).pop();
+
+                                      if (_dialogContext.mounted) {
+                                        Navigator.of(_dialogContext)
+                                            .pop(); // Dismiss loading dialog
+
+                                        if (result == "-1") {
+                                          _showErrorSnackbar(
+                                              "Foto non caricata sei troppo lontano dall'evento");
+                                        } else {
+                                          _showUploadSuccess(
+                                              _dialogContext, true);
+                                        }
+                                      }
+
+                                      completer.complete(result);
                                     },
                                     child: Padding(
                                       padding: const EdgeInsets.all(16),
@@ -598,6 +681,8 @@ class _HomepageState extends State<Homepage> {
         );
       },
     );
+
+    return completer.future;
   }
 
   Widget _buildButton(String text,
@@ -640,8 +725,7 @@ class _HomepageState extends State<Homepage> {
         // Crea un overlay che scende dall'alto
         final overlay = OverlayEntry(
           builder: (context) => Positioned(
-            top: MediaQuery.of(context).padding.top +
-                10, // Posizione dall'alto con spazio per la status bar
+            top: MediaQuery.of(context).padding.top + 10,
             left: 0,
             right: 0,
             child: Material(
@@ -695,10 +779,14 @@ class _HomepageState extends State<Homepage> {
 
   Future<String> _showEventSelectionDialog(
       List<dynamic> events, File image) async {
-    showDialog(
+    final completer = Completer<String>();
+
+    await showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (BuildContext dialogContext) {
-        // Use separate context for dialog
+        _dialogContext = dialogContext;
+
         return Dialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
@@ -749,7 +837,15 @@ class _HomepageState extends State<Homepage> {
                       color: Colors.green,
                       onPressed: () async {
                         Navigator.of(dialogContext).pop();
-                        showEventsDialog(events);
+
+                        showLoadingDialog("Loading");
+                        final eventId = await showEventsDialog(events);
+                        if (_dialogContext.mounted) {
+                          Navigator.of(_dialogContext)
+                              .pop(); // Dismiss loading dialog
+                        }
+
+                        completer.complete(eventId);
                       },
                     ),
                     const SizedBox(height: 8),
@@ -759,10 +855,15 @@ class _HomepageState extends State<Homepage> {
                       outlined: true,
                       onPressed: () async {
                         Navigator.of(dialogContext).pop();
-                        id = await uploadImage(image);
-                        if (context.mounted) {
-                          _showUploadSuccess(context, false);
+
+                        showLoadingDialog("Loading");
+                        final uploadId = await uploadImage(image);
+                        if (_dialogContext.mounted) {
+                          Navigator.of(_dialogContext).pop();
+                          _showUploadSuccess(_dialogContext, false);
                         }
+
+                        completer.complete(uploadId);
                       },
                     ),
                   ],
@@ -773,7 +874,8 @@ class _HomepageState extends State<Homepage> {
         );
       },
     );
-    return id;
+
+    return completer.future;
   }
 
   Future<String> _uploadImageWithoutEvent(File image) async {
@@ -784,32 +886,6 @@ class _HomepageState extends State<Homepage> {
       _showUploadSuccess(context, false);
     }
     return id;
-  }
-
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text(
-          'Errore',
-          style: TextStyle(color: Colors.white),
-        ),
-        backgroundColor: Colors.red,
-        content: Text(
-          message,
-          style: TextStyle(color: Colors.white),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text(
-              'OK',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> uploadDetails(String id, String brand, String type,
@@ -987,6 +1063,7 @@ class _HomepageState extends State<Homepage> {
                       if (id != "-1") {
                         _showOutfitDetailsSheet(id);
                       }
+                      id = "-1";
                     },
                   ),
                 ],
@@ -1426,7 +1503,7 @@ class _HomepageState extends State<Homepage> {
       }
 
       if (mounted) {
-        _showErrorDialog("Si è verificato un errore con la fotocamera");
+        _showErrorSnackbar("Si è verificato un errore con la fotocamera");
       }
 
       return id;
@@ -1448,7 +1525,8 @@ class _HomepageState extends State<Homepage> {
       }
       if (pickedFile != null) {
         File image = File(pickedFile.path);
-        return await _processSelectedImage(image);
+        id = await _processSelectedImage(image);
+        return id;
       } else {
         return id;
       }
@@ -1457,9 +1535,7 @@ class _HomepageState extends State<Homepage> {
         Navigator.of(_dialogContext).pop();
         isDialogOpen = false;
       }
-
-      _showErrorDialog(
-          "Si è verificato un errore con la galleria: ${e.toString()}");
+      _showErrorSnackbar("Si è verificato un errore con la galleria");
 
       Navigator.pushReplacement(
         context,
@@ -1481,13 +1557,15 @@ class _HomepageState extends State<Homepage> {
       Navigator.of(_dialogContext).pop();
 
       if (isEnrolledInEvents != null && isEnrolledInEvents.isNotEmpty) {
-        return await _showEventSelectionDialog(isEnrolledInEvents, image);
+        id = await _showEventSelectionDialog(isEnrolledInEvents, image);
+        return id;
       } else {
-        return await _uploadImageWithoutEvent(image);
+        id = await _uploadImageWithoutEvent(image);
+        return id;
       }
     } catch (e) {
       Navigator.of(_dialogContext).pop();
-      _showErrorDialog("Si è verificato un errore: $e");
+      _showErrorSnackbar("Si è verificato un errore");
       return id;
     }
   }

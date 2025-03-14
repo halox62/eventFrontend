@@ -38,6 +38,7 @@ class _EventCalendarState extends State<EventCalendar> {
   bool creator = false;
   late BuildContext _dialogContext;
   int count = 0;
+  bool _isLoadingDialogShown = false;
 
   @override
   void initState() {
@@ -50,6 +51,7 @@ class _EventCalendarState extends State<EventCalendar> {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
+        _isLoadingDialogShown = true;
         _dialogContext = context;
         return Dialog(
           backgroundColor: Colors.white,
@@ -306,8 +308,44 @@ class _EventCalendarState extends State<EventCalendar> {
                 foregroundColor: Colors.red,
               ),
               onPressed: () async {
-                Navigator.of(context).pop();
-                await delete_event(eventCode);
+                try {
+                  // Close the current dialog first
+                  Navigator.of(context).pop();
+
+                  // Show loading dialog
+                  showLoadingDialog("Eliminazione evento in corso...");
+
+                  // Wait for delete operation to complete
+                  await delete_event(eventCode);
+
+                  // Hide loading dialog
+                  hideLoadingDialog();
+
+                  // Show success message
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Evento eliminato con successo'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  // Hide loading dialog in case of error
+                  hideLoadingDialog();
+
+                  // Show error message
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                            'Errore durante l\'eliminazione: ${e.toString()}'),
+                        backgroundColor: Colors.red,
+                        duration: Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                }
               },
               child: const Text('Elimina'),
             ),
@@ -691,6 +729,7 @@ class _EventCalendarState extends State<EventCalendar> {
                             SnackBar(
                               content:
                                   const Text('Codice copiato negli appunti'),
+                              backgroundColor: Colors.green,
                               behavior: SnackBarBehavior.floating,
                               width: 300,
                               shape: RoundedRectangleBorder(
@@ -1012,10 +1051,38 @@ class _EventCalendarState extends State<EventCalendar> {
                     ),
                     const SizedBox(width: 8),
                     ElevatedButton(
-                      onPressed: () {
+                      onPressed: () async {
                         if (codeController.text.length == 8) {
-                          addEvent(codeController.text);
-                          Navigator.of(dialogContext).pop();
+                          try {
+                            // Show loading dialog
+                            showLoadingDialog("Aggiunta evento in corso...");
+
+                            // Wait for the addEvent to complete
+                            await addEvent(codeController.text);
+
+                            // Hide loading dialog
+                            hideLoadingDialog();
+
+                            // Close the current dialog
+                            if (dialogContext != null &&
+                                Navigator.of(dialogContext).canPop()) {
+                              Navigator.of(dialogContext).pop();
+                            }
+                          } catch (e) {
+                            // Hide loading dialog in case of error
+                            hideLoadingDialog();
+
+                            // Show error message
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Errore: ${e.toString()}'),
+                                  backgroundColor: Colors.red,
+                                  duration: Duration(seconds: 3),
+                                ),
+                              );
+                            }
+                          }
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -1055,7 +1122,7 @@ class _EventCalendarState extends State<EventCalendar> {
     );
   }
 
-  void addEvent(String code) async {
+  Future<String> addEvent(String code) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('jwtToken');
     final url = Uri.parse('https://$host/addEvent');
@@ -1092,6 +1159,7 @@ class _EventCalendarState extends State<EventCalendar> {
       _showFeedbackMessage('Errore di connessione durante l\'eliminazione',
           isError: true);
     }
+    return "ok";
   }
 
   void _showCreateEventDialog(BuildContext context) {
@@ -1369,25 +1437,24 @@ class _EventCalendarState extends State<EventCalendar> {
 
       String formattedDate = DateFormat('yyyy-MM-dd').format(selectedDate);
 
+      // Controlla se la data è precedente a oggi
       if (selectedDate.isBefore(todayOnlyDate)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text("La data selezionata è precedente a oggi!")),
-        );
+        if (context.mounted) {
+          Navigator.of(context).pop();
+          _showErrorSnackbar("La data selezionata è precedente a oggi!");
+        }
         return "NO";
       }
 
+      // Controlla se l'orario è già passato
       if (selectedDate.year == today.year &&
           selectedDate.month == today.month &&
           selectedDate.day == today.day) {
         TimeOfDay now = TimeOfDay.now();
         if (timeOfDay.hour < now.hour ||
             (timeOfDay.hour == now.hour && timeOfDay.minute < now.minute)) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("L'orario selezionato è già passato!"),
-            ),
-          );
+          _showErrorSnackbar("L'orario selezionato è già passato!");
+
           return "NO";
         }
       }
@@ -1404,11 +1471,11 @@ class _EventCalendarState extends State<EventCalendar> {
       // Calcolo della data e ora di fine (24 ore dopo = 1440 minuti)
       DateTime endDateTime = startDateTime.add(const Duration(minutes: 1440));
 
-// Formattazione della data e ora di fine
+      // Formattazione della data e ora di fine
       String formattedEndDate = DateFormat('yyyy-MM-dd').format(endDateTime);
       String formattedEndTime = DateFormat('HH:mm').format(endDateTime);
 
-// Aggiunta di tutti i campi alla richiesta
+      // Aggiunta di tutti i campi alla richiesta
       request.fields['eventName'] = eventName;
       request.fields['eventDate'] = formattedDate;
       request.fields['eventTime'] = DateFormat('HH:mm').format(startDateTime);
@@ -1418,139 +1485,286 @@ class _EventCalendarState extends State<EventCalendar> {
       request.fields['longitude'] = location.longitude.toString();
       request.fields['create'] = "yes";
 
-      print(formattedEndDate);
-      print(formattedEndTime);
-
       var response = await request.send();
 
       if (response.statusCode == 201) {
         await _initializeEventCreate();
         await _initializeEventSubscribe();
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Evento creato con successo!'),
             backgroundColor: Colors.green,
           ),
         );
+
         return "ok";
       } else {
         _checkTokenValidity(response.statusCode);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Evento non creato!'),
-            backgroundColor: Colors.red,
-          ),
-        );
+
+        _showErrorSnackbar("Evento non creato!");
+
         return "NO";
       }
     } catch (error) {
-      _showFeedbackMessage('Errore durante la creazione dell\'evento',
-          isError: true);
+      _showErrorSnackbar("Errore durante la creazione dell'evento");
+
       return "NO";
     }
   }
 
   void _showQRCode(String eventName, DateTime selectedDate, TimeOfDay timeOfDay,
       LatLng location) async {
-    showLoadingDialog("Creazione evento");
-    String data = _generateRandomString(8);
-    String res =
-        await createEvent(eventName, data, selectedDate, timeOfDay, location);
-    Navigator.of(_dialogContext).pop();
+    try {
+      showLoadingDialog("Creazione evento in corso...");
 
-    if (res == "ok") {
-      showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: const Text('QR Code'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                QrImageView(
-                  data: data,
-                  version: QrVersions.auto,
-                  size: 200.0,
+      String data = _generateRandomString(8);
+      String res =
+          await createEvent(eventName, data, selectedDate, timeOfDay, location);
+
+      hideLoadingDialog();
+
+      if (res == "ok") {
+        if (context.mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (BuildContext dialogContext) {
+              return Dialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                const SizedBox(height: 20),
-                const Text('Condividi il tuo QR Code!'),
-
-                // Codice + Pulsante copia
-                Container(
-                  margin: const EdgeInsets.only(top: 16, bottom: 8),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surfaceContainerHighest
-                        .withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(12),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: 320,
+                    // Non definire un'altezza massima per permettere al contenuto di adattarsi
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        data,
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
-                              fontWeight: FontWeight.w500,
-                            ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.copy, size: 20),
-                        onPressed: () async {
-                          await Clipboard.setData(ClipboardData(text: data));
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content:
-                                    const Text('Codice copiato negli appunti'),
-                                behavior: SnackBarBehavior.floating,
-                                width: 300,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min, // Importante!
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const Text(
+                          'QR Code',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        QrImageView(
+                          data: data,
+                          version: QrVersions.auto,
+                          size: 200.0,
+                          backgroundColor: Colors.white,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Condividi il tuo QR Code!',
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Container per il codice
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                data,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
-                            );
-                          }
-                        },
-                        tooltip: 'Copia codice',
-                      ),
-                    ],
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: const Icon(Icons.copy, size: 20),
+                                onPressed: () async {
+                                  await Clipboard.setData(
+                                      ClipboardData(text: data));
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context)
+                                        .hideCurrentSnackBar();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                            'Codice copiato negli appunti'),
+                                        behavior: SnackBarBehavior.fixed,
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                  }
+                                },
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                tooltip: 'Copia codice',
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Bottoni
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            OutlinedButton.icon(
+                              icon: const Icon(Icons.share),
+                              label: const Text('Condividi'),
+                              onPressed: () {
+                                Share.share(
+                                    'Unisciti al mio evento con il codice: $data');
+                              },
+                            ),
+                            const SizedBox(width: 16),
+                            ElevatedButton(
+                              child: const Text('Chiudi'),
+                              onPressed: () {
+                                Navigator.of(dialogContext).pop();
+                                // Aggiorna lo stato se necessario
+                                if (mounted) {
+                                  setState(() {});
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        }
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      }
+    }
+  }
+
+  void hideLoadingDialog() {
+    if (_isLoadingDialogShown) {
+      try {
+        if (Navigator.of(_dialogContext, rootNavigator: true).canPop()) {
+          Navigator.of(_dialogContext, rootNavigator: true).pop();
+        }
+      } catch (e) {
+        print('Errore durante la chiusura del dialog: $e');
+      } finally {
+        _isLoadingDialogShown = false;
+      }
+    }
+  }
+
+  /*void showLoadingDialog(String message) {
+    if (_isLoadingDialogShown) return;
+
+    _isLoadingDialogShown = true;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        _dialogContext = context;
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Flexible(
+                  child: Text(
+                    message,
+                    style: const TextStyle(fontSize: 16),
                   ),
                 ),
               ],
             ),
-            actions: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  TextButton(
-                    child: const Text('Condividi'),
-                    onPressed: () {
-                      Share.share(data);
-                    },
-                  ),
-                  TextButton(
-                    child: const Text('Chiudi'),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      initState();
-                    },
-                  ),
-                ],
+          ),
+        );
+      },
+    ).then((_) {
+      _isLoadingDialogShown = false;
+    });
+  }*/
+
+  void _showErrorSnackbar(String message) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Crea un overlay che scende dall'alto
+      final overlay = OverlayEntry(
+        builder: (context) => Positioned(
+          top: MediaQuery.of(context).padding.top + 10,
+          left: 0,
+          right: 0,
+          child: Material(
+            color: Colors.transparent,
+            child: Center(
+              child: Container(
+                width: 300,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: Text(
+                        message,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ],
-          );
-        },
+            ),
+          ),
+        ),
       );
-    } else {
-      _showFeedbackMessage('Errore durante la creazione dell\'evento',
-          isError: true);
-    }
+
+      // Inserisce l'overlay
+      Overlay.of(context).insert(overlay);
+
+      // Rimuove l'overlay dopo 3 secondi
+      Future.delayed(const Duration(seconds: 3), () {
+        overlay.remove();
+      });
+    });
   }
 }

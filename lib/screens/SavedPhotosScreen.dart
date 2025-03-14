@@ -444,7 +444,9 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen> {
           _photos.remove(photoId);
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Foto eliminata con successo')),
+          const SnackBar(
+              content: Text('Foto eliminata con successo'),
+              backgroundColor: Colors.red),
         );
         _loadSavedPhotos();
         return true;
@@ -452,14 +454,17 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen> {
         _checkTokenValidity(response.statusCode);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Errore: impossibile eliminare la foto')),
+              content: Text('Errore: impossibile eliminare la foto'),
+              backgroundColor: Colors.red),
         );
         return false;
       }
     } catch (error) {
       // Gestione errori di rete
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Errore di connessione')),
+        const SnackBar(
+            content: Text('Errore di connessione'),
+            backgroundColor: Colors.red),
       );
       return false;
     }
