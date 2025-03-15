@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
@@ -13,7 +14,8 @@ class SavedPhotosScreen extends StatefulWidget {
   State<SavedPhotosScreen> createState() => _SavedPhotosScreenState();
 }
 
-class _SavedPhotosScreenState extends State<SavedPhotosScreen> {
+class _SavedPhotosScreenState extends State<SavedPhotosScreen>
+    with TickerProviderStateMixin {
   bool _isLoading = false;
   List<Map<String, dynamic>> _photos = [];
   String? _errorMessage;
@@ -144,13 +146,19 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text('Le tue foto salvate'),
+        title: const Text('Le tue foto salvate',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        centerTitle: true,
         elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadSavedPhotos,
+            tooltip: 'Aggiorna',
           ),
         ],
       ),
@@ -161,69 +169,126 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen> {
   Widget _buildBody() {
     if (_isLoading && _photos.isEmpty) {
       return const Center(
-        child: CircularProgressIndicator(),
+        child: CircularProgressIndicator(
+          color: Colors.blue,
+        ),
       );
     }
 
     if (_errorMessage != null && _photos.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.error_outline,
-              size: 60,
-              color: Colors.red,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Si è verificato un errore',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(_errorMessage!),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loadSavedPhotos,
-              child: const Text('Riprova'),
-            ),
-          ],
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          margin: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                spreadRadius: 1,
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                size: 70,
+                color: Colors.redAccent,
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Si è verificato un errore',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _errorMessage!,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[700]),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: _loadSavedPhotos,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Riprova'),
+                style: ElevatedButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     if (_photos.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.photo_album_outlined,
-              size: 80,
-              color: Colors.grey,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Nessuna foto salvata',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            const Text('Le foto che salverai appariranno qui'),
-          ],
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          margin: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                spreadRadius: 1,
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.photo_album_outlined,
+                size: 100,
+                color: Colors.grey[400],
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Nessuna foto salvata',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Le foto che salverai appariranno qui',
+                style: TextStyle(color: Colors.grey[600]),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       );
     }
 
     return RefreshIndicator(
       onRefresh: _loadSavedPhotos,
+      color: Colors.blue,
       child: Padding(
-        padding: const EdgeInsets.all(12.0),
+        padding: const EdgeInsets.all(16.0),
         child: GridView.builder(
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
             childAspectRatio: 0.75,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
           ),
           itemCount: _photos.length,
           itemBuilder: (context, index) {
@@ -237,41 +302,72 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen> {
 
   Widget _buildPhotoCard(Map<String, dynamic> photo, int index) {
     return GestureDetector(
-      onLongPress: () => _handleImageLongPress(index),
-      onTap: () {
-        setState(() {
-          enlargedImageIndex = index;
-          isImageEnlarged = true;
-        });
-        _showFullScreenImage(photo['file_url'] ?? '');
-      },
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: SizedBox(
-                width: double.infinity,
-                child: _buildImage(photo['file_url'] ?? ''),
-              ),
+      onTap: () => _handleImageLongPress(index),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              spreadRadius: 1,
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-            // Barra bianca sotto la foto
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-              color: Colors.white,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Stelle e punteggio
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            color: Colors.white,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Stack(
+                    fit: StackFit.expand,
                     children: [
+                      _buildImage(photo['file_url'] ?? ''),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Barra inferiore con azioni
+                Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Titolo o info della foto, se disponibile
+                      Expanded(
+                        child: Text(
+                          photo['title'] ?? 'Foto',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black87,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                       const Icon(
                         Icons.star,
                         color: Colors.amber,
@@ -285,37 +381,59 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ],
-                  ),
 
-                  // Pulsanti
-                  Row(
-                    children: [
+                      const SizedBox(width: 8),
+
                       // Pulsante Delete
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(20),
-                          onTap: () => _showDeleteDialog(context, photo['id']),
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            child: const Icon(
-                              Icons.delete_outline,
-                              color: Colors.black,
-                              size: 20,
-                            ),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: () => _showDeleteDialog(context, photo['id']),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.red,
+                            size: 20,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-
-                      // Pulsante Save
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
+        ),
+      ),
+    );
+  }
+
+// Miglioramenti per la visualizzazione delle immagini
+  Widget _buildImage(String url) {
+    return CachedNetworkImage(
+      imageUrl: url,
+      fit: BoxFit.cover,
+      placeholder: (context, url) => Container(
+        color: Colors.grey[200],
+        child: const Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+          ),
+        ),
+      ),
+      errorWidget: (context, url, error) => Container(
+        color: Colors.grey[300],
+        child: const Center(
+          child: Icon(
+            Icons.broken_image,
+            color: Colors.grey,
+            size: 40,
+          ),
         ),
       ),
     );
@@ -498,116 +616,295 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen> {
 
   Future<void> _handleImageLongPress(int index) async {
     String message = "";
-    setState(() {
-      enlargedImageIndex = index;
-      isImageEnlarged = true;
-    });
-
     try {
-      String id = _photos[index]["id"].toString();
-      final response = await http.get(
-        Uri.parse('https://$host/infoPhoto?id_photo=$id'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-      final responseJson = jsonDecode(response.body);
-      message = responseJson["message"];
+      setState(() {
+        enlargedImageIndex = index;
+        isImageEnlarged = true;
+      });
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['success']) {
-          showModalBottomSheet(
-            context: context,
+      String id = _photos[index]["id"].toString();
+      bool isLoading = true;
+      bool hasDetails = false;
+      Map<String, dynamic>? photoData;
+      AnimationController? animationController;
+
+      // Fetch dei dettagli
+      try {
+        final response = await http.get(
+          Uri.parse('https://$host/infoPhoto?id_photo=$id'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        );
+        final responseJson = jsonDecode(response.body);
+        message = responseJson["message"] ?? "Errore sconosciuto";
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          if (data['success'] && data['data']?.isNotEmpty == true) {
+            hasDetails = true;
+            photoData = data;
+          }
+        } else {
+          _checkTokenValidity(response.statusCode);
+        }
+      } catch (e) {
+        print('Error fetching photo details: $e');
+      } finally {
+        isLoading = false;
+      }
+
+      // Mostra il dialog comunque, anche se non ci sono dettagli
+      animationController = AnimationController(
+        duration: const Duration(seconds: 1),
+        vsync: this,
+      )..repeat(reverse: true);
+
+      await showDialog(
+        context: context,
+        builder: (dialogContext) {
+          bool showSwipeIndicator = hasDetails;
+          bool isDetailsLoading = false;
+          double totalDragDistance = 0.0;
+
+          if (hasDetails) {
+            Future.delayed(const Duration(seconds: 5), () {
+              if (dialogContext.mounted) {
+                showSwipeIndicator = false;
+                (dialogContext as Element).markNeedsBuild();
+              }
+            });
+          }
+
+          final animation = hasDetails && animationController != null
+              ? Tween<Offset>(
+                  begin: Offset.zero,
+                  end: const Offset(0, -0.5),
+                ).animate(CurvedAnimation(
+                  parent: animationController,
+                  curve: Curves.easeInOut,
+                ))
+              : null;
+
+          final imageUrl = _photos[index]["file_url"]?.toString() ??
+              'https://via.placeholder.com/150'; // Fallback per URL null
+
+          return Dialog(
             backgroundColor: Colors.transparent,
-            isScrollControlled: true,
-            builder: (BuildContext context) {
-              return Container(
-                height: MediaQuery.of(context).size.height * 0.7,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      spreadRadius: 1,
-                      blurRadius: 10,
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Container(
-                      margin: EdgeInsets.only(top: 12),
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Text(
-                        'Dettagli Foto',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
+            insetPadding: EdgeInsets.zero,
+            child: Stack(
+              alignment: Alignment.bottomCenter,
+              children: [
+                GestureDetector(
+                  onTap: () => Navigator.pop(dialogContext),
+                  child: InteractiveViewer(
+                    panEnabled: true,
+                    boundaryMargin: const EdgeInsets.all(80),
+                    minScale: 0.5,
+                    maxScale: 4,
+                    child: Container(
+                      color: Colors.black.withOpacity(0.9),
+                      child: Center(
+                        child: Image.network(
+                          imageUrl,
+                          fit: BoxFit.contain,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            return loadingProgress == null
+                                ? child
+                                : const Center(
+                                    child: CircularProgressIndicator());
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Center(
+                              child: Text(
+                                'Immagine non disponibile',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ),
-                    Expanded(
-                      child: ListView.builder(
-                        padding: EdgeInsets.symmetric(horizontal: 20),
-                        itemCount: data['data'].length,
-                        itemBuilder: (context, index) {
-                          final item = data['data'][index];
-                          return Card(
-                            elevation: 2,
-                            margin: EdgeInsets.only(bottom: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Padding(
-                              padding: EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildInfoRow('Tipo', item['type']),
-                                  SizedBox(height: 8),
-                                  _buildInfoRow('Marca', item['brand']),
-                                  SizedBox(height: 8),
-                                  _buildInfoRow('Modello', item['model']),
-                                  SizedBox(height: 8),
-                                  _buildInfoRow('Feedback', item['feedback']),
+                  ),
+                ),
+                if (hasDetails)
+                  GestureDetector(
+                    onVerticalDragUpdate: (details) {
+                      totalDragDistance += details.primaryDelta!;
+                      print('Total drag distance: $totalDragDistance');
+                    },
+                    onVerticalDragEnd: (details) async {
+                      print('Drag end velocity: ${details.primaryVelocity}');
+                      if (totalDragDistance < -50 && photoData != null) {
+                        print('Swipe up detected!');
+                        isDetailsLoading = true;
+                        await showModalBottomSheet(
+                          context: dialogContext,
+                          backgroundColor: Colors.transparent,
+                          isScrollControlled: true,
+                          builder: (context) {
+                            Future.delayed(const Duration(milliseconds: 500),
+                                () {
+                              if (context.mounted) {
+                                isDetailsLoading = false;
+                                (context as Element).markNeedsBuild();
+                              }
+                            });
+
+                            return Container(
+                              height: MediaQuery.of(context).size.height * 0.7,
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(20)),
+                                boxShadow: [
+                                  BoxShadow(
+                                      color: Colors.black12,
+                                      spreadRadius: 1,
+                                      blurRadius: 10)
                                 ],
                               ),
-                            ),
-                          );
-                        },
+                              child: Stack(
+                                children: [
+                                  Column(
+                                    children: [
+                                      Container(
+                                        margin: const EdgeInsets.only(top: 12),
+                                        width: 40,
+                                        height: 4,
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[300],
+                                          borderRadius:
+                                              BorderRadius.circular(2),
+                                        ),
+                                      ),
+                                      const Padding(
+                                        padding: EdgeInsets.all(20),
+                                        child: Text(
+                                          'Dettagli Foto',
+                                          style: TextStyle(
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: ListView.builder(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 20),
+                                          itemCount: photoData!['data'].length,
+                                          itemBuilder: (context, idx) {
+                                            final item =
+                                                photoData!['data'][idx];
+                                            return Card(
+                                              elevation: 2,
+                                              margin: const EdgeInsets.only(
+                                                  bottom: 16),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.all(16),
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                        'Tipo: ${item['type'] ?? 'N/A'}'),
+                                                    const SizedBox(height: 8),
+                                                    Text(
+                                                        'Marca: ${item['brand'] ?? 'N/A'}'),
+                                                    const SizedBox(height: 8),
+                                                    Text(
+                                                        'Modello: ${item['model'] ?? 'N/A'}'),
+                                                    const SizedBox(height: 8),
+                                                    Text(
+                                                        'Feedback: ${item['feedback'] ?? 'N/A'}'),
+                                                  ],
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (isDetailsLoading)
+                                    Container(
+                                      color: Colors.black.withOpacity(0.5),
+                                      child: const Center(
+                                        child: CircularProgressIndicator(
+                                            color: Colors.white),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      }
+                      totalDragDistance = 0.0;
+                    },
+                    behavior: HitTestBehavior.translucent,
+                  ),
+                if (showSwipeIndicator && hasDetails && animation != null)
+                  Positioned(
+                    bottom: 40,
+                    child: SlideTransition(
+                      position: animation,
+                      child: Column(
+                        children: const [
+                          Icon(Icons.keyboard_arrow_up,
+                              color: Colors.white, size: 36),
+                          SizedBox(height: 4),
+                          Text(
+                            'Scorri verso l\'alto per i dettagli',
+                            style: TextStyle(color: Colors.white, fontSize: 14),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              );
-            },
+                  ),
+                if (isLoading)
+                  const Center(
+                      child: CircularProgressIndicator(color: Colors.white)),
+                // Nessuna "X" come richiesto
+              ],
+            ),
           );
-        }
-      } else {
-        _checkTokenValidity(response.statusCode);
-        throw Exception('Failed to load photo info');
+        },
+      );
+
+      // Mostra SnackBar solo se non ci sono dettagli
+      if (!hasDetails && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                message.isEmpty ? 'Nessun dettaglio disponibile' : message),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: Colors.red,
-        ),
-      );
+      print('Error in _handleImageLongPress: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                message.isEmpty ? 'Errore durante l\'operazione' : message),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          isImageEnlarged = false;
+          enlargedImageIndex = -1;
+        });
+      }
     }
   }
 
@@ -631,39 +928,6 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildImage(String url) {
-    return Image.network(
-      url,
-      fit: BoxFit.cover,
-      width: double.infinity,
-      height: double.infinity,
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) {
-          return child;
-        }
-        return Container(
-          color: Colors.grey[300],
-          child: Center(
-            child: CircularProgressIndicator(
-              value: loadingProgress.expectedTotalBytes != null
-                  ? loadingProgress.cumulativeBytesLoaded /
-                      (loadingProgress.expectedTotalBytes ?? 1)
-                  : null,
-            ),
-          ),
-        );
-      },
-      errorBuilder: (context, error, stackTrace) {
-        return Container(
-          color: Colors.grey[300],
-          child: const Center(
-            child: Icon(Icons.error),
-          ),
-        );
-      },
     );
   }
 }

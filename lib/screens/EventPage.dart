@@ -20,7 +20,7 @@ class EventPageControl extends StatefulWidget {
   EventPage createState() => EventPage();
 }
 
-class EventPage extends State<EventPageControl> {
+class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
   String? userEmail;
   List<dynamic> eventPhotos = [];
   Map<int, String> usernamePhotos = {};
@@ -924,7 +924,7 @@ class EventPage extends State<EventPageControl> {
                               await _likePhoto(index);
                             }
                           },
-                          onLongPress: () => _handleImageLongPress(index),
+                          onTap: () => _handleImageLongPress(index),
                           child: Container(
                             constraints: BoxConstraints(
                               maxHeight: MediaQuery.of(context).size.width,
@@ -1092,114 +1092,295 @@ class EventPage extends State<EventPageControl> {
   }
 
   Future<void> _handleImageLongPress(int index) async {
-    setState(() {
-      enlargedImageIndex = index;
-      isImageEnlarged = true;
-    });
-
     try {
-      String id = eventPhotos[index]["id"].toString();
-      final response = await http.get(
-        Uri.parse('https://$host/infoPhoto?id_photo=$id'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      setState(() {
+        enlargedImageIndex = index;
+        isImageEnlarged = true;
+      });
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['success']) {
-          showModalBottomSheet(
-            context: context,
-            backgroundColor: Colors.transparent,
-            isScrollControlled: true,
-            builder: (BuildContext context) {
-              return Container(
-                height: MediaQuery.of(context).size.height * 0.7,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      spreadRadius: 1,
-                      blurRadius: 10,
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Container(
-                      margin: EdgeInsets.only(top: 12),
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Text(
-                        'Dettagli Foto',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
+      String id = eventPhotos[index]["id"].toString();
+      bool isLoading = true;
+      bool hasDetails = false;
+      Map<String, dynamic>? photoData;
+      AnimationController? animationController;
+
+      // Fetch dei dettagli
+      try {
+        final response = await http.get(
+          Uri.parse('https://$host/infoPhoto?id_photo=$id'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        );
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          if (data['success'] && data['data']?.isNotEmpty == true) {
+            hasDetails = true;
+            photoData = data;
+          }
+        } else {
+          _checkTokenValidity(response.statusCode);
+        }
+      } catch (e) {
+        print('Error fetching photo details: $e');
+      } finally {
+        isLoading = false;
+      }
+
+      if (hasDetails) {
+        animationController = AnimationController(
+          duration: const Duration(seconds: 1),
+          vsync: this,
+        )..repeat(reverse: true);
+
+        await showDialog(
+          context: context,
+          builder: (dialogContext) {
+            bool showSwipeIndicator = hasDetails;
+            bool isDetailsLoading = false;
+            double totalDragDistance = 0.0;
+
+            if (hasDetails) {
+              Future.delayed(const Duration(seconds: 5), () {
+                if (dialogContext.mounted) {
+                  showSwipeIndicator = false;
+                  (dialogContext as Element).markNeedsBuild();
+                }
+              });
+            }
+
+            final animation = hasDetails && animationController != null
+                ? Tween<Offset>(
+                    begin: Offset.zero,
+                    end: const Offset(0, -0.5),
+                  ).animate(CurvedAnimation(
+                    parent: animationController,
+                    curve: Curves.easeInOut,
+                  ))
+                : null;
+
+            print(eventPhotos);
+            // Controllo per evitare null
+            final imageUrl = eventPhotos[index]["image_path"]?.toString() ??
+                'https://via.placeholder.com/150';
+
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              insetPadding: EdgeInsets.zero,
+              child: Stack(
+                alignment: Alignment.bottomCenter,
+                children: [
+                  GestureDetector(
+                    onTap: () => Navigator.pop(dialogContext),
+                    child: InteractiveViewer(
+                      panEnabled: true,
+                      boundaryMargin: const EdgeInsets.all(80),
+                      minScale: 0.5,
+                      maxScale: 4,
+                      child: Container(
+                        color: Colors.black.withOpacity(0.9),
+                        child: Center(
+                          child: Image.network(
+                            imageUrl, // Usa l'URL controllato
+                            fit: BoxFit.contain,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              return loadingProgress == null
+                                  ? child
+                                  : const Center(
+                                      child: CircularProgressIndicator());
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Center(
+                                child: Text(
+                                  'Immagine non disponibile',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              );
+                            },
+                          ),
                         ),
                       ),
                     ),
-                    Expanded(
-                      child: ListView.builder(
-                        padding: EdgeInsets.symmetric(horizontal: 20),
-                        itemCount: data['data'].length,
-                        itemBuilder: (context, index) {
-                          final item = data['data'][index];
-                          return Card(
-                            elevation: 2,
-                            margin: EdgeInsets.only(bottom: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Padding(
-                              padding: EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildInfoRow('Tipo', item['type']),
-                                  SizedBox(height: 8),
-                                  _buildInfoRow('Marca', item['brand']),
-                                  SizedBox(height: 8),
-                                  _buildInfoRow('Modello', item['model']),
-                                  SizedBox(height: 8),
-                                  _buildInfoRow('Feedback', item['feedback']),
-                                ],
-                              ),
-                            ),
+                  ),
+                  if (hasDetails)
+                    GestureDetector(
+                      onVerticalDragUpdate: (details) {
+                        totalDragDistance += details.primaryDelta!;
+                      },
+                      onVerticalDragEnd: (details) async {
+                        if (totalDragDistance < -50 && photoData != null) {
+                          isDetailsLoading = true;
+                          await showModalBottomSheet(
+                            context: dialogContext,
+                            backgroundColor: Colors.transparent,
+                            isScrollControlled: true,
+                            builder: (context) {
+                              Future.delayed(const Duration(milliseconds: 500),
+                                  () {
+                                if (context.mounted) {
+                                  isDetailsLoading = false;
+                                  (context as Element).markNeedsBuild();
+                                }
+                              });
+
+                              return Container(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.7,
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.vertical(
+                                      top: Radius.circular(20)),
+                                  boxShadow: [
+                                    BoxShadow(
+                                        color: Colors.black12,
+                                        spreadRadius: 1,
+                                        blurRadius: 10)
+                                  ],
+                                ),
+                                child: Stack(
+                                  children: [
+                                    Column(
+                                      children: [
+                                        Container(
+                                          margin:
+                                              const EdgeInsets.only(top: 12),
+                                          width: 40,
+                                          height: 4,
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey[300],
+                                            borderRadius:
+                                                BorderRadius.circular(2),
+                                          ),
+                                        ),
+                                        const Padding(
+                                          padding: EdgeInsets.all(20),
+                                          child: Text(
+                                            'Dettagli Foto',
+                                            style: TextStyle(
+                                                fontSize: 24,
+                                                fontWeight: FontWeight.bold),
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: ListView.builder(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 20),
+                                            itemCount:
+                                                photoData!['data'].length,
+                                            itemBuilder: (context, idx) {
+                                              final item =
+                                                  photoData!['data'][idx];
+                                              return Card(
+                                                elevation: 2,
+                                                margin: const EdgeInsets.only(
+                                                    bottom: 16),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                                child: Padding(
+                                                  padding:
+                                                      const EdgeInsets.all(16),
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Text(
+                                                          'Tipo: ${item['type'] ?? 'N/A'}'),
+                                                      const SizedBox(height: 8),
+                                                      Text(
+                                                          'Marca: ${item['brand'] ?? 'N/A'}'),
+                                                      const SizedBox(height: 8),
+                                                      Text(
+                                                          'Modello: ${item['model'] ?? 'N/A'}'),
+                                                      const SizedBox(height: 8),
+                                                      Text(
+                                                          'Feedback: ${item['feedback'] ?? 'N/A'}'),
+                                                    ],
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (isDetailsLoading)
+                                      Container(
+                                        color: Colors.black.withOpacity(0.5),
+                                        child: const Center(
+                                          child: CircularProgressIndicator(
+                                              color: Colors.white),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              );
+                            },
                           );
-                        },
+                        }
+                        totalDragDistance = 0.0;
+                      },
+                      behavior: HitTestBehavior.translucent,
+                    ),
+                  if (showSwipeIndicator && hasDetails && animation != null)
+                    Positioned(
+                      bottom: 40,
+                      child: SlideTransition(
+                        position: animation,
+                        child: Column(
+                          children: const [
+                            Icon(Icons.keyboard_arrow_up,
+                                color: Colors.white, size: 36),
+                            SizedBox(height: 4),
+                            Text(
+                              'Scorri verso l\'alto per i dettagli',
+                              style:
+                                  TextStyle(color: Colors.white, fontSize: 14),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ],
-                ),
-              );
-            },
+                  if (isLoading)
+                    const Center(
+                        child: CircularProgressIndicator(color: Colors.white)),
+                  // Nessuna "X" come richiesto
+                ],
+              ),
+            );
+          },
+        );
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Nessun dettaglio disponibile'),
+              backgroundColor: Colors.red,
+            ),
           );
         }
-      } else {
-        _checkTokenValidity(response.statusCode);
-        throw Exception('Failed to load photo info');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Nessun dettaglio disponibile'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      print('Error in _handleImageLongPress: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Errore durante l\'operazione'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          isImageEnlarged = false;
+          enlargedImageIndex = -1;
+        });
+      }
     }
   }
 

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -15,7 +16,8 @@ class ProfilePage extends StatefulWidget {
   _ProfilePageState createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
+class _ProfilePageState extends State<ProfilePage>
+    with TickerProviderStateMixin {
   String? userName;
   String? userEmail;
   String? profileImageUrl;
@@ -157,18 +159,6 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  void _handleImageTap(int index) {
-    setState(() {
-      if (enlargedImageIndex == index) {
-        enlargedImageIndex = null;
-        isImageEnlarged = false;
-      } else {
-        enlargedImageIndex = index;
-        isImageEnlarged = true;
-      }
-    });
-  }
-
   Widget _buildStat(String label, String value) {
     return Column(
       children: [
@@ -201,36 +191,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildImageTile(int index) {
-    return Hero(
-      tag: 'image_$index',
-      child: GestureDetector(
-        onTap: () => _handleImageTap(index),
-        onLongPress: () => _handleImageLongPress(index),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                spreadRadius: 1,
-                blurRadius: 5,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              images[index],
-              fit: BoxFit.cover,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -251,161 +211,209 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       body: Stack(
         children: [
-          isLoading
-              ? const Center(
-                  child: CircularProgressIndicator(
-                    color: Colors.black54,
-                    strokeWidth: 2,
-                  ),
-                )
-              : CustomScrollView(
-                  controller: _scrollController,
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: Container(
-                        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-                        child: Column(
-                          children: [
-                            Container(
-                              width: 100,
-                              height: 100,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    spreadRadius: 1,
-                                    blurRadius: 15,
-                                    offset: const Offset(0, 5),
-                                  ),
-                                ],
-                              ),
-                              child: CircleAvatar(
-                                radius: 50,
-                                backgroundColor: Colors.grey[200],
-                                backgroundImage: profileImageUrl != null
-                                    ? NetworkImage(profileImageUrl!)
-                                    : null,
-                                child: profileImageUrl == null
-                                    ? Icon(
-                                        Icons.person,
-                                        size: 50,
-                                        color: Colors.grey[400],
-                                      )
-                                    : null,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              userName ?? 'Unknown User',
-                              style: const TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const SizedBox(height: 24),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                _buildStat('Posts', images.length.toString()),
-                                _buildDivider(),
-                                _buildStat('Points', point),
-                                _buildDivider(),
-                                _buildStat('Save', save!),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
+          RefreshIndicator(
+            onRefresh: () async {
+              // Implementa qui la logica di ricaricamento dati
+              await Future.delayed(const Duration(seconds: 1));
+              setState(() {
+                isLoading = false;
+              });
+            },
+            child: isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      color: Colors.black54,
+                      strokeWidth: 2,
                     ),
-                    SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      sliver: SliverGrid(
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 0.9,
-                        ),
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            return Column(
-                              children: [
-                                Expanded(
-                                  child: _buildImageTile(index),
+                  )
+                : CustomScrollView(
+                    controller: _scrollController,
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Container(
+                          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+                          child: Column(
+                            children: [
+                              Container(
+                                width: 100,
+                                height: 100,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      spreadRadius: 1,
+                                      blurRadius: 15,
+                                      offset: const Offset(0, 5),
+                                    ),
+                                  ],
                                 ),
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 1, horizontal: 20),
-                                  color: Colors.white,
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      // Stelle e punteggio
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const Icon(
-                                            Icons.star,
-                                            color: Colors.amber,
-                                            size: 20,
-                                          ),
-                                          const SizedBox(width: 5),
-                                          Text(
-                                            points[index].toString(),
-                                            style: const TextStyle(
-                                              color: Colors.black,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 18,
+                                child: profileImageUrl != null
+                                    ? ClipOval(
+                                        child: CachedNetworkImage(
+                                          imageUrl: profileImageUrl!,
+                                          placeholder: (context, url) =>
+                                              Container(
+                                            color: Colors.grey[200],
+                                            child: const Center(
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: Colors.grey,
+                                              ),
                                             ),
                                           ),
-                                        ],
-                                      ),
-
-                                      // Pulsante Save
-                                      GestureDetector(
-                                        onTap: () => savePhoto(index),
-                                        child: const Icon(
-                                          Icons.save,
-                                          color: Colors.black,
-                                          size: 20,
+                                          errorWidget: (context, url, error) =>
+                                              Container(
+                                            color: Colors.grey[200],
+                                            child: Icon(
+                                              Icons.person,
+                                              size: 50,
+                                              color: Colors.grey[400],
+                                            ),
+                                          ),
+                                          fit: BoxFit.cover,
+                                        ),
+                                      )
+                                    : CircleAvatar(
+                                        radius: 50,
+                                        backgroundColor: Colors.grey[200],
+                                        child: Icon(
+                                          Icons.person,
+                                          size: 50,
+                                          color: Colors.grey[400],
                                         ),
                                       ),
-                                    ],
-                                  ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                userName ?? 'Unknown User',
+                                style: const TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                  letterSpacing: -0.5,
                                 ),
-                              ],
-                            );
-                          },
-                          childCount: images.length,
+                              ),
+                              const SizedBox(height: 8),
+                              const SizedBox(height: 24),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  _buildStat('Posts', images.length.toString()),
+                                  _buildDivider(),
+                                  _buildStat('Points', point),
+                                  _buildDivider(),
+                                  _buildStat('Save', save!),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        sliver: SliverGrid(
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: 0.9,
+                          ),
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              return _buildPhotoCard(index);
+                            },
+                            childCount: images.length,
+                          ),
+                        ),
+                      ),
+                      // Aggiungi spazio in fondo alla griglia
+                      const SliverToBoxAdapter(
+                        child: SizedBox(height: 30),
+                      ),
+                    ],
+                  ),
+          ),
 
-          // Mostra solo l'immagine ingrandita quando isImageEnlarged è true
+          // Visualizzazione immagine ingrandita
           if (isImageEnlarged && enlargedImageIndex != null)
             GestureDetector(
-              onTap: () => _handleImageTap(enlargedImageIndex!),
+              onTap: () => _toggleEnlargedImage(),
               child: Container(
                 color: Colors.black.withOpacity(0.95),
                 alignment: Alignment.center,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                child: Stack(
                   children: [
-                    Expanded(
+                    // Immagine ingrandita
+                    Center(
                       child: Hero(
                         tag: 'image_${enlargedImageIndex!}',
-                        child: Image.network(
-                          images[enlargedImageIndex!],
+                        child: CachedNetworkImage(
+                          imageUrl: images[enlargedImageIndex!],
+                          placeholder: (context, url) => const Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => const Center(
+                            child: Icon(
+                              Icons.error_outline,
+                              color: Colors.white,
+                              size: 50,
+                            ),
+                          ),
                           fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+
+                    // Pulsante per chiudere
+                    Positioned(
+                      top: 40,
+                      right: 20,
+                      child: IconButton(
+                        icon: const Icon(Icons.close,
+                            color: Colors.white, size: 30),
+                        onPressed: _toggleEnlargedImage,
+                      ),
+                    ),
+
+                    // Info sull'immagine
+                    Positioned(
+                      bottom: 40,
+                      left: 0,
+                      right: 0,
+                      child: Container(
+                        color: Colors.black.withOpacity(0.5),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 12, horizontal: 20),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.star,
+                                    color: Colors.amber, size: 24),
+                                const SizedBox(width: 8),
+                                Text(
+                                  points[enlargedImageIndex!].toString(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 20,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.save,
+                                  color: Colors.white, size: 24),
+                              onPressed: () => savePhoto(enlargedImageIndex!),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -418,115 +426,417 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Future<void> _handleImageLongPress(int index) async {
-    setState(() {
-      enlargedImageIndex = index;
-      isImageEnlarged = true;
-    });
-
-    try {
-      String id = ids[index].toString();
-      final response = await http.get(
-        Uri.parse('https://$host/infoPhoto?id_photo=$id'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['success']) {
-          showModalBottomSheet(
-            context: context,
-            backgroundColor: Colors.transparent,
-            isScrollControlled: true,
-            builder: (BuildContext context) {
-              return Container(
-                height: MediaQuery.of(context).size.height * 0.7,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      spreadRadius: 1,
-                      blurRadius: 10,
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Container(
-                      margin: EdgeInsets.only(top: 12),
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2),
+// Metodo per costruire la card della foto
+  Widget _buildPhotoCard(int index) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Column(
+          children: [
+            // Immagine
+            Expanded(
+              child: _buildImageTile(index),
+            ),
+            // Barra inferiore
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+              color: Colors.white,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Stelle e punteggio
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.star,
+                        color: Colors.amber,
+                        size: 20,
                       ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Text(
-                        'Dettagli Foto',
-                        style: TextStyle(
-                          fontSize: 24,
+                      const SizedBox(width: 5),
+                      Text(
+                        points[index].toString(),
+                        style: const TextStyle(
+                          color: Colors.black,
                           fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Pulsante Save
+                  GestureDetector(
+                    onTap: () => savePhoto(index),
+                    child: const Icon(
+                      Icons.save,
+                      color: Colors.black,
+                      size: 20,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+// Metodo per costruire il riquadro dell'immagine con caricamento ottimizzato
+  Widget _buildImageTile(int index) {
+    return GestureDetector(
+      onTap: () => _handleImageTap(index),
+      child: Hero(
+        tag: 'image_${index}',
+        child: CachedNetworkImage(
+          imageUrl: images[index],
+          fit: BoxFit.cover,
+          memCacheHeight: 300, // Cache ottimizzata
+          placeholder: (context, url) => Container(
+            color: Colors.grey[200],
+            child: const Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          errorWidget: (context, url, error) => Container(
+            color: Colors.grey[200],
+            child: const Center(
+              child: Icon(
+                Icons.error_outline,
+                color: Colors.grey,
+                size: 30,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+// Metodo per gestire il toggle dell'immagine ingrandita
+  void _toggleEnlargedImage() {
+    setState(() {
+      isImageEnlarged = !isImageEnlarged;
+      if (!isImageEnlarged) {
+        enlargedImageIndex = null;
+      }
+    });
+  }
+
+// Metodo modificato per gestire il tap sull'immagine
+  void _handleImageTap(int index) {
+    setState(() {
+      if (isImageEnlarged && enlargedImageIndex == index) {
+        isImageEnlarged = false;
+        enlargedImageIndex = null;
+      } else {
+        isImageEnlarged = true;
+        enlargedImageIndex = index;
+      }
+    });
+  }
+
+  Future<void> _handleImageLongPress(int index) async {
+    try {
+      setState(() {
+        enlargedImageIndex = index;
+        isImageEnlarged = true;
+      });
+
+      String id = ids[index].toString();
+      bool isLoading = true;
+      bool hasDetails = false;
+      Map<String, dynamic>? photoData;
+      AnimationController? animationController;
+
+      // Fetch dei dettagli
+      try {
+        final response = await http.get(
+          Uri.parse('https://$host/infoPhoto?id_photo=$id'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        );
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          if (data['success'] && data['data']?.isNotEmpty == true) {
+            hasDetails = true;
+            photoData = data;
+          }
+        } else {
+          _checkTokenValidity(response.statusCode);
+        }
+      } catch (e) {
+        print('Error fetching photo details: $e');
+      } finally {
+        isLoading = false;
+      }
+
+      // Mostra il dialog comunque, anche se non ci sono dettagli
+      animationController = AnimationController(
+        duration: const Duration(seconds: 1),
+        vsync: this,
+      )..repeat(reverse: true);
+
+      await showDialog(
+        context: context,
+        builder: (dialogContext) {
+          bool showSwipeIndicator = hasDetails;
+          bool isDetailsLoading = false;
+          double totalDragDistance = 0.0;
+
+          if (hasDetails) {
+            Future.delayed(const Duration(seconds: 5), () {
+              if (dialogContext.mounted) {
+                showSwipeIndicator = false;
+                (dialogContext as Element).markNeedsBuild();
+              }
+            });
+          }
+
+          final animation = hasDetails && animationController != null
+              ? Tween<Offset>(
+                  begin: Offset.zero,
+                  end: const Offset(0, -0.5),
+                ).animate(CurvedAnimation(
+                  parent: animationController,
+                  curve: Curves.easeInOut,
+                ))
+              : null;
+
+          final imageUrl = images[index]?.toString() ??
+              'https://via.placeholder.com/150'; // Assumo che l'URL sia in images[index]
+
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: EdgeInsets.zero,
+            child: Stack(
+              alignment: Alignment.bottomCenter,
+              children: [
+                GestureDetector(
+                  onTap: () => Navigator.pop(dialogContext),
+                  child: InteractiveViewer(
+                    panEnabled: true,
+                    boundaryMargin: const EdgeInsets.all(80),
+                    minScale: 0.5,
+                    maxScale: 4,
+                    child: Container(
+                      color: Colors.black.withOpacity(0.9),
+                      child: Center(
+                        child: Image.network(
+                          imageUrl,
+                          fit: BoxFit.contain,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            return loadingProgress == null
+                                ? child
+                                : const Center(
+                                    child: CircularProgressIndicator());
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Center(
+                              child: Text(
+                                'Immagine non disponibile',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ),
-                    Expanded(
-                      child: ListView.builder(
-                        padding: EdgeInsets.symmetric(horizontal: 20),
-                        itemCount: data['data'].length,
-                        itemBuilder: (context, index) {
-                          final item = data['data'][index];
-                          return Card(
-                            elevation: 2,
-                            margin: EdgeInsets.only(bottom: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Padding(
-                              padding: EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildInfoRow('Tipo', item['type']),
-                                  SizedBox(height: 8),
-                                  _buildInfoRow('Marca', item['brand']),
-                                  SizedBox(height: 8),
-                                  _buildInfoRow('Modello', item['model']),
-                                  SizedBox(height: 8),
-                                  _buildInfoRow('Feedback', item['feedback']),
+                  ),
+                ),
+                if (hasDetails)
+                  GestureDetector(
+                    onVerticalDragUpdate: (details) {
+                      totalDragDistance += details.primaryDelta!;
+                      print('Total drag distance: $totalDragDistance');
+                    },
+                    onVerticalDragEnd: (details) async {
+                      print('Drag end velocity: ${details.primaryVelocity}');
+                      if (totalDragDistance < -50 && photoData != null) {
+                        print('Swipe up detected!');
+                        isDetailsLoading = true;
+                        await showModalBottomSheet(
+                          context: dialogContext,
+                          backgroundColor: Colors.transparent,
+                          isScrollControlled: true,
+                          builder: (context) {
+                            Future.delayed(const Duration(milliseconds: 500),
+                                () {
+                              if (context.mounted) {
+                                isDetailsLoading = false;
+                                (context as Element).markNeedsBuild();
+                              }
+                            });
+
+                            return Container(
+                              height: MediaQuery.of(context).size.height * 0.7,
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(20)),
+                                boxShadow: [
+                                  BoxShadow(
+                                      color: Colors.black12,
+                                      spreadRadius: 1,
+                                      blurRadius: 10)
                                 ],
                               ),
-                            ),
-                          );
-                        },
+                              child: Stack(
+                                children: [
+                                  Column(
+                                    children: [
+                                      Container(
+                                        margin: const EdgeInsets.only(top: 12),
+                                        width: 40,
+                                        height: 4,
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[300],
+                                          borderRadius:
+                                              BorderRadius.circular(2),
+                                        ),
+                                      ),
+                                      const Padding(
+                                        padding: EdgeInsets.all(20),
+                                        child: Text(
+                                          'Dettagli Foto',
+                                          style: TextStyle(
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: ListView.builder(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 20),
+                                          itemCount: photoData!['data'].length,
+                                          itemBuilder: (context, idx) {
+                                            final item =
+                                                photoData!['data'][idx];
+                                            return Card(
+                                              elevation: 2,
+                                              margin: const EdgeInsets.only(
+                                                  bottom: 16),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.all(16),
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                        'Tipo: ${item['type'] ?? 'N/A'}'),
+                                                    const SizedBox(height: 8),
+                                                    Text(
+                                                        'Marca: ${item['brand'] ?? 'N/A'}'),
+                                                    const SizedBox(height: 8),
+                                                    Text(
+                                                        'Modello: ${item['model'] ?? 'N/A'}'),
+                                                    const SizedBox(height: 8),
+                                                    Text(
+                                                        'Feedback: ${item['feedback'] ?? 'N/A'}'),
+                                                  ],
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (isDetailsLoading)
+                                    Container(
+                                      color: Colors.black.withOpacity(0.5),
+                                      child: const Center(
+                                        child: CircularProgressIndicator(
+                                            color: Colors.white),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      }
+                      totalDragDistance = 0.0;
+                    },
+                    behavior: HitTestBehavior.translucent,
+                  ),
+                if (showSwipeIndicator && hasDetails && animation != null)
+                  Positioned(
+                    bottom: 40,
+                    child: SlideTransition(
+                      position: animation,
+                      child: Column(
+                        children: const [
+                          Icon(Icons.keyboard_arrow_up,
+                              color: Colors.white, size: 36),
+                          SizedBox(height: 4),
+                          Text(
+                            'Scorri verso l\'alto per i dettagli',
+                            style: TextStyle(color: Colors.white, fontSize: 14),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              );
-            },
+                  ),
+                if (isLoading)
+                  const Center(
+                      child: CircularProgressIndicator(color: Colors.white)),
+                // Nessuna "X" come richiesto
+              ],
+            ),
           );
-        }
-      } else {
-        _checkTokenValidity(response.statusCode);
-        throw Exception('Failed to load photo info');
+        },
+      );
+
+      // Mostra SnackBar solo se non ci sono dettagli
+      if (!hasDetails && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Nessun dettaglio disponibile'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Nessun dettaglio disponibile'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      print('Error in _handleImageLongPress: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Errore durante l\'operazione'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          isImageEnlarged = false;
+          enlargedImageIndex = -1;
+        });
+      }
     }
   }
 

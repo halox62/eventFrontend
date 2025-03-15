@@ -41,7 +41,7 @@ class Homepage extends StatefulWidget {
   _HomepageState createState() => _HomepageState();
 }
 
-class _HomepageState extends State<Homepage> {
+class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
   File? _capturedImage;
   List<String> images = [];
   List<String> ids = [];
@@ -108,7 +108,7 @@ class _HomepageState extends State<Homepage> {
     }
   }
 
-  void _handleImageTap(int index) {
+  /*void _handleImageTap(int index) {
     setState(() {
       if (enlargedImageIndex == index) {
         enlargedImageIndex = null;
@@ -118,7 +118,7 @@ class _HomepageState extends State<Homepage> {
         isImageEnlarged = false;
       }
     });
-  }
+  }*/
 
   Widget _buildInfoRow(String label, String value) {
     return Row(
@@ -1210,6 +1210,29 @@ class _HomepageState extends State<Homepage> {
                     },
                   ),
                   const SizedBox(height: 20),
+                  // Pulsante Salva spostato qui, subito dopo la griglia
+                  if (selectedTypes.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: ElevatedButton(
+                        onPressed: itemsDetails.length == selectedTypes.length
+                            ? () async {
+                                if (id != "-1") {
+                                  Navigator.pop(context);
+                                  await _uploadAllItems(itemsDetails, id);
+                                }
+                              }
+                            : null,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          minimumSize: const Size(double.infinity, 50),
+                        ),
+                        child: Text(
+                          'Salva outfit (${itemsDetails.length}/${selectedTypes.length} dettagli inseriti)',
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 10),
                   if (selectedTypes.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1251,25 +1274,6 @@ class _HomepageState extends State<Homepage> {
                               ),
                             );
                           }),
-                          const SizedBox(height: 20),
-                          ElevatedButton(
-                            onPressed: itemsDetails.length ==
-                                    selectedTypes.length
-                                ? () async {
-                                    if (id != "-1") {
-                                      Navigator.pop(context);
-                                      await _uploadAllItems(itemsDetails, id);
-                                    }
-                                  }
-                                : null,
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              minimumSize: const Size(double.infinity, 50),
-                            ),
-                            child: Text(
-                              'Salva outfit (${itemsDetails.length}/${selectedTypes.length} dettagli inseriti)',
-                            ),
-                          ),
                         ],
                       ),
                     ),
@@ -2205,14 +2209,15 @@ class _HomepageState extends State<Homepage> {
                                     Expanded(
                                       child: GestureDetector(
                                         onTap: () {
-                                          setState(() {
+                                          _handleImageTap(index);
+                                          /*setState(() {
                                             enlargedImageIndex = index;
                                             isImageEnlarged = true;
-                                          });
+                                          });*/
                                           //_showFullScreenImage(images[index]);
                                         },
-                                        onLongPress: () =>
-                                            _handleImageLongPress(index),
+                                        /*onLongPress: () =>
+                                            _handleImageLongPress(index),*/
                                         child: Container(
                                           width: double.infinity,
                                           decoration: BoxDecoration(
@@ -2395,115 +2400,286 @@ class _HomepageState extends State<Homepage> {
     );
   }
 
-  Future<void> _handleImageLongPress(int index) async {
-    setState(() {
-      enlargedImageIndex = index;
-      isImageEnlarged = true;
-    });
-
+  Future<void> _handleImageTap(int index) async {
     try {
-      String id = ids[index];
-      final response = await http.get(
-        Uri.parse('https://$host/infoPhoto?id_photo=$id'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      setState(() {
+        enlargedImageIndex = index;
+        isImageEnlarged = true;
+      });
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['success']) {
-          showModalBottomSheet(
-            context: context,
+      bool isLoading = true;
+      bool hasDetails = false;
+      Map<String, dynamic>? photoData;
+      AnimationController? animationController;
+
+      try {
+        final response = await http.get(
+          Uri.parse('https://$host/infoPhoto?id_photo=${ids[index]}'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        );
+
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          if (data['success'] && data['data']?.isNotEmpty == true) {
+            hasDetails = true;
+            photoData = data;
+          }
+        } else {
+          _checkTokenValidity(response.statusCode);
+        }
+      } catch (e) {
+        print('Error fetching photo details: $e');
+      } finally {
+        isLoading = false;
+      }
+
+      if (hasDetails) {
+        animationController = AnimationController(
+          duration: const Duration(seconds: 1),
+          vsync: this,
+        )..repeat(reverse: true);
+      }
+
+      await showDialog(
+        context: context,
+        builder: (dialogContext) {
+          bool showSwipeIndicator = hasDetails;
+          bool isDetailsLoading = false;
+          double totalDragDistance = 0.0;
+
+          if (hasDetails) {
+            Future.delayed(const Duration(seconds: 5), () {
+              if (dialogContext.mounted) {
+                showSwipeIndicator = false;
+                (dialogContext as Element).markNeedsBuild();
+              }
+            });
+          }
+
+          final animation = hasDetails && animationController != null
+              ? Tween<Offset>(
+                  begin: Offset.zero,
+                  end: const Offset(0, -0.5),
+                ).animate(CurvedAnimation(
+                  parent: animationController,
+                  curve: Curves.easeInOut,
+                ))
+              : null;
+
+          return Dialog(
             backgroundColor: Colors.transparent,
-            isScrollControlled: true,
-            builder: (BuildContext context) {
-              return Container(
-                height: MediaQuery.of(context).size.height * 0.7,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      spreadRadius: 1,
-                      blurRadius: 10,
-                    ),
-                  ],
-                ),
-                child: Column(
+            insetPadding: EdgeInsets.zero,
+            child: StatefulBuilder(
+              builder: (context, setDialogState) {
+                return Stack(
+                  alignment: Alignment.bottomCenter,
                   children: [
-                    Container(
-                      margin: EdgeInsets.only(top: 12),
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Text(
-                        'Dettagli Foto',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
+                    GestureDetector(
+                      onTap: () => Navigator.pop(
+                          dialogContext), // Chiusura solo con tap sull'immagine
+                      child: InteractiveViewer(
+                        panEnabled: true,
+                        boundaryMargin: const EdgeInsets.all(80),
+                        minScale: 0.5,
+                        maxScale: 4,
+                        child: Container(
+                          color: Colors.black.withOpacity(0.9),
+                          child: Center(
+                            child: Image.network(
+                              images[index],
+                              fit: BoxFit.contain,
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
+                                return loadingProgress == null
+                                    ? child
+                                    : const Center(
+                                        child: CircularProgressIndicator());
+                              },
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                    Expanded(
-                      child: ListView.builder(
-                        padding: EdgeInsets.symmetric(horizontal: 20),
-                        itemCount: data['data'].length,
-                        itemBuilder: (context, index) {
-                          final item = data['data'][index];
-                          return Card(
-                            elevation: 2,
-                            margin: EdgeInsets.only(bottom: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Padding(
-                              padding: EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildInfoRow('Tipo', item['type']),
-                                  SizedBox(height: 8),
-                                  _buildInfoRow('Marca', item['brand']),
-                                  SizedBox(height: 8),
-                                  _buildInfoRow('Modello', item['model']),
-                                  SizedBox(height: 8),
-                                  _buildInfoRow('Feedback', item['feedback']),
-                                ],
-                              ),
-                            ),
-                          );
+                    if (hasDetails)
+                      GestureDetector(
+                        onVerticalDragUpdate: (details) {
+                          totalDragDistance += details.primaryDelta!;
                         },
+                        onVerticalDragEnd: (details) async {
+                          if (totalDragDistance < -50 && photoData != null) {
+                            setDialogState(() => isDetailsLoading = true);
+                            await showModalBottomSheet(
+                              context: dialogContext,
+                              backgroundColor: Colors.transparent,
+                              isScrollControlled: true,
+                              builder: (context) => StatefulBuilder(
+                                builder: (context, setBottomSheetState) {
+                                  Future.delayed(
+                                      const Duration(milliseconds: 500), () {
+                                    if (context.mounted) {
+                                      setBottomSheetState(
+                                          () => isDetailsLoading = false);
+                                      setDialogState(
+                                          () => isDetailsLoading = false);
+                                    }
+                                  });
+
+                                  return Container(
+                                    height: MediaQuery.of(context).size.height *
+                                        0.7,
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.vertical(
+                                          top: Radius.circular(20)),
+                                      boxShadow: [
+                                        BoxShadow(
+                                            color: Colors.black12,
+                                            spreadRadius: 1,
+                                            blurRadius: 10)
+                                      ],
+                                    ),
+                                    child: Stack(
+                                      children: [
+                                        Column(
+                                          children: [
+                                            Container(
+                                              margin: const EdgeInsets.only(
+                                                  top: 12),
+                                              width: 40,
+                                              height: 4,
+                                              decoration: BoxDecoration(
+                                                color: Colors.grey[300],
+                                                borderRadius:
+                                                    BorderRadius.circular(2),
+                                              ),
+                                            ),
+                                            const Padding(
+                                              padding: EdgeInsets.all(20),
+                                              child: Text(
+                                                'Dettagli Foto',
+                                                style: TextStyle(
+                                                    fontSize: 24,
+                                                    fontWeight:
+                                                        FontWeight.bold),
+                                              ),
+                                            ),
+                                            Expanded(
+                                              child: ListView.builder(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 20),
+                                                itemCount:
+                                                    photoData!['data'].length,
+                                                itemBuilder: (context, idx) =>
+                                                    Card(
+                                                  elevation: 2,
+                                                  margin: const EdgeInsets.only(
+                                                      bottom: 16),
+                                                  shape: RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              12)),
+                                                  child: Padding(
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                            16),
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Text(
+                                                            'Tipo: ${photoData!['data'][idx]['type'] ?? 'N/A'}'),
+                                                        const SizedBox(
+                                                            height: 8),
+                                                        Text(
+                                                            'Marca: ${photoData!['data'][idx]['brand'] ?? 'N/A'}'),
+                                                        const SizedBox(
+                                                            height: 8),
+                                                        Text(
+                                                            'Modello: ${photoData!['data'][idx]['model'] ?? 'N/A'}'),
+                                                        const SizedBox(
+                                                            height: 8),
+                                                        Text(
+                                                            'Feedback: ${photoData!['data'][idx]['feedback'] ?? 'N/A'}'),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        if (isDetailsLoading)
+                                          Container(
+                                            color:
+                                                Colors.black.withOpacity(0.5),
+                                            child: const Center(
+                                              child: CircularProgressIndicator(
+                                                  color: Colors.white),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            );
+                          }
+                          totalDragDistance = 0.0;
+                        },
+                        behavior: HitTestBehavior.translucent,
                       ),
-                    ),
+                    if (showSwipeIndicator && hasDetails && animation != null)
+                      Positioned(
+                        bottom: 40,
+                        child: SlideTransition(
+                          position: animation,
+                          child: Column(
+                            children: const [
+                              Icon(Icons.keyboard_arrow_up,
+                                  color: Colors.white, size: 36),
+                              SizedBox(height: 4),
+                              Text(
+                                'Scorri verso l\'alto per i dettagli',
+                                style: TextStyle(
+                                    color: Colors.white, fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    if (isLoading)
+                      const Center(
+                          child:
+                              CircularProgressIndicator(color: Colors.white)),
+                    // Rimosso il pulsante "X" (IconButton con Icons.close)
                   ],
-                ),
-              );
-            },
+                );
+              },
+            ),
           );
-        }
-      } else {
-        _checkTokenValidity(response.statusCode);
-        throw Exception('Failed to load photo info');
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Non ci sono dettagli disponibili'),
-          backgroundColor: Colors.red,
-        ),
+        },
       );
+    } catch (e) {
+      print('Error in _handleImageTap: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Errore durante l\'operazione'),
+              backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          isImageEnlarged = false;
+          enlargedImageIndex = -1;
+        });
+      }
     }
   }
 
