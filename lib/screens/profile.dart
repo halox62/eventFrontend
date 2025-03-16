@@ -107,7 +107,6 @@ class _ProfilePageState extends State<ProfilePage>
             profileImageUrl = data['profileImageUrl'];
             point = data['point'];
             save = data['save'].toString();
-            print(save);
             isLoading = false;
           });
         }
@@ -340,8 +339,8 @@ class _ProfilePageState extends State<ProfilePage>
           // Visualizzazione immagine ingrandita
           if (isImageEnlarged && enlargedImageIndex != null)
             GestureDetector(
-              onTap: () => _toggleEnlargedImage(),
-              child: Container(
+                // onTap: () => _handleImageLongPress(enlargedImageIndex!),
+                /*child: Container(
                 color: Colors.black.withOpacity(0.95),
                 alignment: Alignment.center,
                 child: Stack(
@@ -371,15 +370,6 @@ class _ProfilePageState extends State<ProfilePage>
                     ),
 
                     // Pulsante per chiudere
-                    Positioned(
-                      top: 40,
-                      right: 20,
-                      child: IconButton(
-                        icon: const Icon(Icons.close,
-                            color: Colors.white, size: 30),
-                        onPressed: _toggleEnlargedImage,
-                      ),
-                    ),
 
                     // Info sull'immagine
                     Positioned(
@@ -419,8 +409,8 @@ class _ProfilePageState extends State<ProfilePage>
                     ),
                   ],
                 ),
-              ),
-            ),
+              ),*/
+                ),
         ],
       ),
     );
@@ -497,7 +487,7 @@ class _ProfilePageState extends State<ProfilePage>
 // Metodo per costruire il riquadro dell'immagine con caricamento ottimizzato
   Widget _buildImageTile(int index) {
     return GestureDetector(
-      onTap: () => _handleImageTap(index),
+      onTap: () => _handleImageLongPress(index),
       child: Hero(
         tag: 'image_${index}',
         child: CachedNetworkImage(
@@ -526,16 +516,6 @@ class _ProfilePageState extends State<ProfilePage>
         ),
       ),
     );
-  }
-
-// Metodo per gestire il toggle dell'immagine ingrandita
-  void _toggleEnlargedImage() {
-    setState(() {
-      isImageEnlarged = !isImageEnlarged;
-      if (!isImageEnlarged) {
-        enlargedImageIndex = null;
-      }
-    });
   }
 
 // Metodo modificato per gestire il tap sull'immagine
