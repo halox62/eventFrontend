@@ -1048,8 +1048,10 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                     onTap: () async {
                       Navigator.pop(context);
                       id = await _processGalleryImage();
+                      print(id);
                       if (id != "-1") {
                         _showOutfitDetailsSheet(id);
+                        id = "-1";
                       }
                     },
                   ),
@@ -1062,8 +1064,8 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                       id = await _processCameraImage();
                       if (id != "-1") {
                         _showOutfitDetailsSheet(id);
+                        id = "-1";
                       }
-                      id = "-1";
                     },
                   ),
                 ],

@@ -1161,7 +1161,6 @@ class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
                   ))
                 : null;
 
-            print(eventPhotos);
             // Controllo per evitare null
             final imageUrl = eventPhotos[index]["image_path"]?.toString() ??
                 'https://via.placeholder.com/150';

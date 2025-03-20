@@ -4,8 +4,8 @@ import 'package:share_plus/share_plus.dart';
 
 class ShareProfileDialog extends StatelessWidget {
   final String? email;
-  final String host = "event-production.up.railway.app";
-  //final String host = "event-fit.it";
+  //final String host = "event-production.up.railway.app";
+  final String host = "www.event-fit.it";
 
   const ShareProfileDialog({Key? key, required this.email}) : super(key: key);
 
