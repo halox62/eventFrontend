@@ -59,8 +59,8 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
   int save = 0;
   //String host = "127.0.0.1:5000";
   //String host = "10.0.2.2:5000";
-  String host = "event-production.up.railway.app";
-  //final String host = "event-fit.it";
+  //String host = "event-production.up.railway.app";
+  final String host = "www.event-fit.it";
   final TextEditingController _searchController = TextEditingController();
   late List<dynamic> profilesListSearch;
   late List<dynamic> imagesListSearch;

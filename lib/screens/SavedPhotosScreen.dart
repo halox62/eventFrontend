@@ -26,7 +26,8 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen>
   bool isImageEnlarged = false;
   List<String> ids = [];
 
-  final String host = "event-production.up.railway.app";
+  //String host = "event-production.up.railway.app";
+  final String host = "www.event-fit.it";
 
   @override
   void initState() {

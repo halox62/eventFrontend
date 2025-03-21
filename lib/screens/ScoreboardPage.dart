@@ -22,8 +22,8 @@ class _ScoreboardPageState extends State<ScoreboardPage> {
   bool _hasError = false;
   //String host = "127.0.0.1:5000";
   //String host = "10.0.2.2:5000";
-  String host = "event-production.up.railway.app";
-  //final String host = "event-fit.it";
+  //String host = "event-production.up.railway.app";
+  final String host = "www.event-fit.it";
   String? token;
 
   Map<String, dynamic>? _currentUserData;

@@ -32,8 +32,8 @@ class _EventCalendarState extends State<EventCalendar> {
   List<dynamic> eventJson = [];
   //String host = "127.0.0.1:5000";
   //String host = "10.0.2.2:5000";
-  String host = "event-production.up.railway.app";
-  //final String host = "event-fit.it";
+  //String host = "event-production.up.railway.app";
+  final String host = "www.event-fit.it";
   String eventName = "";
   bool creator = false;
   late BuildContext _dialogContext;
@@ -1437,28 +1437,6 @@ class _EventCalendarState extends State<EventCalendar> {
 
       String formattedDate = DateFormat('yyyy-MM-dd').format(selectedDate);
 
-      // Controlla se la data è precedente a oggi
-      if (selectedDate.isBefore(todayOnlyDate)) {
-        if (context.mounted) {
-          Navigator.of(context).pop();
-          _showErrorSnackbar("La data selezionata è precedente a oggi!");
-        }
-        return "NO";
-      }
-
-      // Controlla se l'orario è già passato
-      if (selectedDate.year == today.year &&
-          selectedDate.month == today.month &&
-          selectedDate.day == today.day) {
-        TimeOfDay now = TimeOfDay.now();
-        if (timeOfDay.hour < now.hour ||
-            (timeOfDay.hour == now.hour && timeOfDay.minute < now.minute)) {
-          _showErrorSnackbar("L'orario selezionato è già passato!");
-
-          return "NO";
-        }
-      }
-
       // Calcolo della data e ora di inizio
       DateTime startDateTime = DateTime(
         selectedDate.year,
@@ -1516,6 +1494,26 @@ class _EventCalendarState extends State<EventCalendar> {
   void _showQRCode(String eventName, DateTime selectedDate, TimeOfDay timeOfDay,
       LatLng location) async {
     try {
+      DateTime today = DateTime.now();
+      DateTime todayOnlyDate = DateTime(today.year, today.month, today.day);
+
+      if (selectedDate.isBefore(todayOnlyDate)) {
+        _showErrorSnackbar("La data selezionata è precedente a oggi!");
+
+        return;
+      }
+
+      if (selectedDate.year == today.year &&
+          selectedDate.month == today.month &&
+          selectedDate.day == today.day) {
+        TimeOfDay now = TimeOfDay.now();
+        if (timeOfDay.hour < now.hour ||
+            (timeOfDay.hour == now.hour && timeOfDay.minute < now.minute)) {
+          _showErrorSnackbar("L'orario selezionato è già passato!");
+          return;
+        }
+      }
+
       showLoadingDialog("Creazione evento in corso...");
 
       String data = _generateRandomString(8);

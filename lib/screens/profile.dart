@@ -24,8 +24,8 @@ class _ProfilePageState extends State<ProfilePage>
   List<String> images = [];
   bool isLoading = true;
   String? token;
-  String host = "event-production.up.railway.app";
-  //final String host = "event-fit.it";
+  //String host = "event-production.up.railway.app";
+  final String host = "www.event-fit.it";
   var point = "0";
   List<String> ids = [];
   List<String> points = [];
