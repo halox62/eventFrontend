@@ -1591,11 +1591,16 @@ class _EventCalendarState extends State<EventCalendar> {
                                     ScaffoldMessenger.of(context)
                                         .hideCurrentSnackBar();
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
+                                      SnackBar(
+                                        content: const Text(
                                             'Codice copiato negli appunti'),
-                                        behavior: SnackBarBehavior.fixed,
-                                        duration: Duration(seconds: 2),
+                                        backgroundColor: Colors.green,
+                                        behavior: SnackBarBehavior.floating,
+                                        width: 300,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
                                       ),
                                     );
                                   }

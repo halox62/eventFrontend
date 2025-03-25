@@ -149,21 +149,17 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen>
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text('Le tue foto salvate',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title:
+            const Text('Save', style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
         elevation: 0,
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadSavedPhotos,
-            tooltip: 'Aggiorna',
-          ),
-        ],
       ),
-      body: _buildBody(),
+      body: RefreshIndicator(
+        onRefresh: _loadSavedPhotos,
+        child: _buildBody(),
+      ),
     );
   }
 

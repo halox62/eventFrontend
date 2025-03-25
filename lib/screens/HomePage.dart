@@ -11,6 +11,7 @@ import 'package:social_flutter_giorgio/firebase_options.dart';
 import 'package:social_flutter_giorgio/screens/AuthPage.dart';
 import 'package:social_flutter_giorgio/screens/Event.dart';
 import 'package:social_flutter_giorgio/screens/SavedPhotosScreen.dart';
+import 'package:social_flutter_giorgio/screens/SettingsPage.dart';
 import 'package:social_flutter_giorgio/screens/ShareProfileDialog.dart';
 import 'package:social_flutter_giorgio/screens/profile.dart';
 import 'package:social_flutter_giorgio/screens/ScoreboardPage.dart';
@@ -1925,10 +1926,13 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
             leading: const Icon(Icons.save),
             title: const Text('Save'),
             onTap: () {
-              Navigator.pop(context); // Chiude il drawer
-              showDialog(
-                context: context,
-                builder: (context) => SavedPhotosScreen(),
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SavedPhotosScreen(),
+                  fullscreenDialog: false,
+                ),
               );
             },
           ),
@@ -1947,6 +1951,20 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                   const SnackBar(content: Text('Email non disponibile')),
                 );
               }
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.settings),
+            title: const Text('Settings'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SettingsPage(),
+                  fullscreenDialog: false,
+                ),
+              );
             },
           ),
           const Divider(),
