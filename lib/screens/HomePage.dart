@@ -84,21 +84,30 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       token = prefs.getString('jwtToken');
       userEmail = prefs.getString('email');
+
       if (token == null || userEmail == null) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const AuthPage()),
-        );
+        Future.microtask(() {
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const AuthPage()),
+            );
+          }
+        });
+        return;
       }
+
       if (loading) {
         showLoadingDialog("Loading");
       }
+
       await fetchProfileData();
       await fetchImages();
+
       Navigator.of(_dialogContext).pop();
     } catch (e) {
       if (mounted) {
-        Navigator.of(_dialogContext).pop();
+        Navigator.of(context).maybePop();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Errore durante l\'aggiornamento'),
@@ -107,41 +116,6 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
         );
       }
     }
-  }
-
-  /*void _handleImageTap(int index) {
-    setState(() {
-      if (enlargedImageIndex == index) {
-        enlargedImageIndex = null;
-        isImageEnlarged = false;
-      } else if (isImageEnlarged) {
-        enlargedImageIndex = null;
-        isImageEnlarged = false;
-      }
-    });
-  }*/
-
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '$label: ',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.grey[700],
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: TextStyle(
-              color: Colors.black87,
-            ),
-          ),
-        ),
-      ],
-    );
   }
 
   Future<void> _handleRefresh() async {
@@ -198,37 +172,6 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
       context,
       MaterialPageRoute(builder: (context) => const AuthPage()),
     );
-  }
-
-  Future<void> _fetchEventCoordinates(String code) async {
-    final url = Uri.parse('https://$host/get_coordinate');
-    final headers = {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
-    };
-    try {
-      final body = jsonEncode({
-        'code': code,
-      });
-
-      final response = await http.post(
-        url,
-        headers: headers,
-        body: body,
-      );
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          eventLatitude = double.tryParse(data['latitude'].toString()) ?? 0.0;
-          eventLongitude = double.tryParse(data['longitude'].toString()) ?? 0.0;
-        });
-      } else {
-        _checkTokenValidity(response.statusCode);
-        throw Exception('Failed to load event coordinates');
-      }
-    } catch (e) {
-      print("Errore nel recuperare le coordinate dell'evento: $e");
-    }
   }
 
   void showLoadingDialog(String message) {
@@ -514,7 +457,6 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
         return 'N/A';
       }
     } catch (e) {
-      print('Error fetching event name: $e');
       return 'N/A';
     }
   }
@@ -1032,12 +974,6 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'Seleziona sorgente',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
               const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -1590,18 +1526,19 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         photo = "true";
-        setState(() {
-          images.clear();
-          ids.clear();
-          points.clear();
+
+        if (mounted) {
           setState(() {
+            images.clear();
+            ids.clear();
+            points.clear();
             for (var image in data['images']) {
               images.add(image['url']);
               ids.add(image['id'].toString());
               points.add(image['point'].toString());
             }
           });
-        });
+        }
       } else {
         _checkTokenValidity(response.statusCode);
       }
@@ -1618,6 +1555,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
       };
       final response =
           await http.post(Uri.parse('https://$host/profile'), headers: headers);
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (mounted) {

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class SelectLocationScreen extends StatefulWidget {
   const SelectLocationScreen({Key? key}) : super(key: key);
@@ -43,15 +44,15 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
   }
 
   void _showPermissionDeniedDialog() {
+    final localizations = AppLocalizations.of(context)!;
     showCupertinoDialog(
       context: context,
       builder: (context) => CupertinoAlertDialog(
-        title: const Text('Permessi Localizzazione'),
-        content: const Text(
-            'Abbiamo bisogno dei permessi di localizzazione per continuare'),
+        title: Text(localizations.location_permission_title),
+        content: Text(localizations.location_permission_required_message),
         actions: [
           CupertinoDialogAction(
-            child: const Text('OK'),
+            child: Text(localizations.ok),
             onPressed: () => Navigator.of(context).pop(),
           )
         ],
@@ -60,22 +61,23 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
   }
 
   void _showPermanentDeniedDialog() {
+    final localizations = AppLocalizations.of(context)!;
     showCupertinoDialog(
       context: context,
       builder: (context) => CupertinoAlertDialog(
-        title: const Text('Permessi Disabilitati'),
-        content: const Text(
-            'Per favore, abilita i permessi di localizzazione nelle impostazioni'),
+        title: Text(localizations.location_permission_disabled_title),
+        content:
+            Text(localizations.location_permission_permanent_denied_message),
         actions: [
           CupertinoDialogAction(
-            child: const Text('Impostazioni'),
+            child: Text(localizations.settings),
             onPressed: () {
               Navigator.of(context).pop();
               openAppSettings();
             },
           ),
           CupertinoDialogAction(
-            child: const Text('Annulla'),
+            child: Text(localizations.cancel),
             onPressed: () => Navigator.of(context).pop(),
           )
         ],
@@ -101,14 +103,15 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
   }
 
   void _showLocationErrorDialog(String error) {
+    final localizations = AppLocalizations.of(context)!;
     showCupertinoDialog(
       context: context,
       builder: (context) => CupertinoAlertDialog(
-        title: const Text('Errore Posizione'),
-        content: Text('Impossibile ottenere la posizione: $error'),
+        title: Text(localizations.location_error_title),
+        content: Text('${localizations.location_error_message}: $error'),
         actions: [
           CupertinoDialogAction(
-            child: const Text('OK'),
+            child: Text(localizations.ok),
             onPressed: () => Navigator.of(context).pop(),
           )
         ],
@@ -125,8 +128,9 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Seleziona Posizione')),
+      appBar: AppBar(title: Text(localizations.select_location)),
       body: Stack(
         children: [
           currentLocation == null
@@ -154,7 +158,7 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
               right: 0,
               child: Center(
                 child: Text(
-                  'Caricamento posizione...',
+                  localizations.loading_location,
                   style: CupertinoTheme.of(context).textTheme.textStyle,
                 ),
               ),
@@ -165,18 +169,19 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
   }
 
   Set<Marker> _createMarkers() {
+    final localizations = AppLocalizations.of(context)!;
     return {
       if (currentLocation != null)
         Marker(
           markerId: const MarkerId('current-location'),
           position: currentLocation!,
-          infoWindow: const InfoWindow(title: 'Posizione Attuale'),
+          infoWindow: InfoWindow(title: localizations.current_location),
         ),
       if (selectedLocation != null)
         Marker(
           markerId: const MarkerId('selected-location'),
           position: selectedLocation!,
-          infoWindow: const InfoWindow(title: 'Posizione Selezionata'),
+          infoWindow: InfoWindow(title: localizations.selected_location),
         ),
     };
   }

@@ -6,7 +6,10 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:social_flutter_giorgio/screens/ForgotPasswordPage.dart';
 import 'package:social_flutter_giorgio/screens/HomePage.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../auth.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({Key? key}) : super(key: key);
@@ -21,6 +24,7 @@ class _AuthPageState extends State<AuthPage> {
   final TextEditingController _password = TextEditingController();
   final TextEditingController _userName = TextEditingController();
   final ImagePicker _picker = ImagePicker();
+  bool _isPrivacyAccepted = false;
 
   File? _profileImage;
   bool isLogin = true;
@@ -35,6 +39,16 @@ class _AuthPageState extends State<AuthPage> {
     _password.dispose();
     _userName.dispose();
     super.dispose();
+  }
+
+  Future<bool> _requestPermissions() async {
+    var cameraStatus = await Permission.camera.request();
+
+    if (cameraStatus.isGranted) {
+      return true;
+    } else {
+      return false;
+    }
   }
 
   Future<bool> search(String email) async {
@@ -56,7 +70,7 @@ class _AuthPageState extends State<AuthPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Account non presente'),
+            content: Text(AppLocalizations.of(context)!.account_not_present),
             backgroundColor: Colors.red,
           ),
         );
@@ -73,32 +87,26 @@ class _AuthPageState extends State<AuthPage> {
 
     try {
       bool response = await search(_email.text);
-      if (!response) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Registration failed. Please try again.'),
-            backgroundColor: Colors.red,
-          ),
+
+      if (response) {
+        await Auth().signInWithEmailAndPassword(
+          email: _email.text,
+          password: _password.text,
         );
-        throw Exception('Registration failed');
-      }
-      await Auth().signInWithEmailAndPassword(
-        email: _email.text,
-        password: _password.text,
-      );
 
-      User? user = FirebaseAuth.instance.currentUser;
-      String? token = await user?.getIdToken();
+        User? user = FirebaseAuth.instance.currentUser;
+        String? token = await user?.getIdToken();
 
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('jwtToken', token!);
-      await prefs.setString('email', _email.text);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('jwtToken', token!);
+        await prefs.setString('email', _email.text);
 
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const Homepage()),
-        );
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const Homepage()),
+          );
+        }
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
@@ -107,8 +115,8 @@ class _AuthPageState extends State<AuthPage> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content:
-                Text('Registration failed. Please try again. $errorMessage'),
+            content: Text(
+                '${AppLocalizations.of(context)!.login_failed} $errorMessage'),
             backgroundColor: Colors.red,
           ),
         );
@@ -145,7 +153,7 @@ class _AuthPageState extends State<AuthPage> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Attenzione manca la foto profilo'),
+            content: Text(AppLocalizations.of(context)!.profile_image_missing),
             backgroundColor: Colors.red,
           ),
         );
@@ -182,8 +190,8 @@ class _AuthPageState extends State<AuthPage> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content:
-                Text('Registration failed. Please try again. $errorMessage'),
+            content: Text(
+                '${AppLocalizations.of(context)!.registration_failed} $errorMessage'),
             backgroundColor: Colors.red,
           ),
         );
@@ -200,43 +208,85 @@ class _AuthPageState extends State<AuthPage> {
     }
   }
 
-  void _showPicker(BuildContext context) {
-    showModalBottomSheet(
+  Future<bool> showDialogPermissionDenied() async {
+    final localizations = AppLocalizations.of(context)!;
+    final result = await showDialog<bool>(
       context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_library, color: Colors.black87),
-              title: const Text('Gallery',
-                  style: TextStyle(color: Colors.black87)),
-              onTap: () {
-                _pickImage(ImageSource.gallery);
-                Navigator.pop(context);
-              },
+      builder: (BuildContext context) => AlertDialog(
+        title: Text(localizations.permissions_denied_title),
+        content: Text(localizations.permissions_denied_description),
+        actions: [
+          TextButton(
+            onPressed: () =>
+                Navigator.of(context).pop(false), // Return false for Cancel
+            child: Text(
+              localizations.cancel,
+              style: TextStyle(color: Colors.black),
             ),
-            ListTile(
-              leading: const Icon(Icons.camera_alt, color: Colors.black87),
-              title:
-                  const Text('Camera', style: TextStyle(color: Colors.black87)),
-              onTap: () {
-                _pickImage(ImageSource.camera);
-                Navigator.pop(context);
-              },
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(true); // Return true for Open Settings
+              openAppSettings(); // Call the function to open settings
+            },
+            child: Text(
+              localizations.open_settings,
+              style: const TextStyle(color: Colors.black),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
+
+    return result ?? false;
+  }
+
+  void _showPicker(BuildContext context) async {
+    // Verifica e richiedi i permessi
+    bool permissionsGranted = await _requestPermissions();
+
+    if (!permissionsGranted) {
+      await showDialogPermissionDenied();
+    } else {
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (context) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: Colors.black87),
+                title: const Text('Gallery',
+                    style: TextStyle(color: Colors.black87)),
+                onTap: () {
+                  _pickImage(ImageSource.gallery);
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: Colors.black87),
+                title: const Text('Camera',
+                    style: TextStyle(color: Colors.black87)),
+                onTap: () {
+                  _pickImage(ImageSource.camera);
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -250,7 +300,9 @@ class _AuthPageState extends State<AuthPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    isLogin ? 'Welcome Back' : 'Create Account',
+                    isLogin
+                        ? localizations.welcome_back
+                        : localizations.create_account,
                     style: const TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
@@ -261,8 +313,8 @@ class _AuthPageState extends State<AuthPage> {
                   const SizedBox(height: 12),
                   Text(
                     isLogin
-                        ? 'Sign in to continue'
-                        : 'Create your account to get started',
+                        ? localizations.sign_in_to_continue
+                        : localizations.create_account_start,
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.black.withOpacity(0.7),
@@ -328,30 +380,30 @@ class _AuthPageState extends State<AuthPage> {
                   ],
                   _buildTextField(
                     controller: _email,
-                    label: 'Email',
+                    label: localizations.email_label,
                     icon: Icons.email_outlined,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Email is required';
+                        return localizations.email_required;
                       }
                       if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
                           .hasMatch(value)) {
-                        return 'Please enter a valid email';
+                        return localizations.email_invalid;
                       }
                       return null;
                     },
                   ),
                   const SizedBox(height: 16),
-                  _buildPasswordField(),
+                  _buildPasswordField(localizations),
                   if (!isLogin) ...[
                     const SizedBox(height: 16),
                     _buildTextField(
                       controller: _userName,
-                      label: 'Username',
+                      label: localizations.username_label,
                       icon: Icons.person_outline,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Username is required';
+                          return localizations.username_required;
                         }
                         return null;
                       },
@@ -367,9 +419,9 @@ class _AuthPageState extends State<AuthPage> {
                             builder: (context) => ForgotPasswordPage(),
                           ),
                         ),
-                        child: const Text(
-                          'Forgot Password?',
-                          style: TextStyle(
+                        child: Text(
+                          localizations.forgot_password,
+                          style: const TextStyle(
                             color: Color(0xFF2196F3),
                             fontWeight: FontWeight.w600,
                           ),
@@ -377,12 +429,58 @@ class _AuthPageState extends State<AuthPage> {
                       ),
                     ),
                   ],
+                  if (!isLogin) ...[
+                    const SizedBox(height: 16),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Checkbox(
+                          value: _isPrivacyAccepted,
+                          onChanged: (value) {
+                            setState(() {
+                              _isPrivacyAccepted = value ?? false;
+                            });
+                          },
+                          activeColor: const Color(0xFF2196F3),
+                        ),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () async {
+                              const url =
+                                  'https://www.iubenda.com/privacy-policy/86697968';
+                              if (await canLaunchUrl(Uri.parse(url))) {
+                                await launchUrl(Uri.parse(url));
+                              }
+                            },
+                            child: Text.rich(
+                              TextSpan(
+                                text: localizations.accept_privacy_policy,
+                                style: TextStyle(
+                                  color: Colors.black.withOpacity(0.7),
+                                  fontSize: 14,
+                                ),
+                                children: [
+                                  TextSpan(
+                                    text: localizations.privacy_policy,
+                                    style: const TextStyle(
+                                      color: Color(0xFF2196F3),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 32),
                   SizedBox(
                     width: double.infinity,
                     height: 56,
                     child: ElevatedButton(
-                      onPressed: _isLoading
+                      onPressed: _isLoading || (!_isPrivacyAccepted && !isLogin)
                           ? null
                           : () => isLogin ? signIn() : createUser(),
                       style: ElevatedButton.styleFrom(
@@ -404,7 +502,9 @@ class _AuthPageState extends State<AuthPage> {
                               ),
                             )
                           : Text(
-                              isLogin ? 'Sign In' : 'Create Account',
+                              isLogin
+                                  ? localizations.sign_in_button
+                                  : localizations.create_account_button,
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -425,15 +525,17 @@ class _AuthPageState extends State<AuthPage> {
                       child: Text.rich(
                         TextSpan(
                           text: isLogin
-                              ? 'Don\'t have an account? '
-                              : 'Already have an account? ',
+                              ? localizations.no_account
+                              : localizations.have_account,
                           style: TextStyle(
                             color: Colors.black.withOpacity(0.7),
                             fontSize: 14,
                           ),
                           children: [
                             TextSpan(
-                              text: isLogin ? 'Sign up' : 'Sign in',
+                              text: isLogin
+                                  ? localizations.sign_up
+                                  : localizations.sign_in,
                               style: const TextStyle(
                                 color: Color(0xFF2196F3),
                                 fontWeight: FontWeight.w600,
@@ -489,22 +591,22 @@ class _AuthPageState extends State<AuthPage> {
     );
   }
 
-  Widget _buildPasswordField() {
+  Widget _buildPasswordField(AppLocalizations localizations) {
     return TextFormField(
       controller: _password,
       obscureText: !_isPasswordVisible,
       style: const TextStyle(color: Colors.black),
       validator: (value) {
         if (value == null || value.isEmpty) {
-          return 'Password is required';
+          return localizations.password_required;
         }
         if (value.length < 8) {
-          return 'Password must be at least 8 characters';
+          return localizations.password_length;
         }
         return null;
       },
       decoration: InputDecoration(
-        labelText: 'Password',
+        labelText: localizations.password_label,
         labelStyle: TextStyle(color: Colors.black.withOpacity(0.7)),
         prefixIcon: Icon(
           Icons.lock_outline,

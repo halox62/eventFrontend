@@ -1,0 +1,64 @@
+{
+    "@@locale": "en",
+    "appTitle": "Flutter Demo",
+    "homePageTitle": "Flutter Home Page",
+
+    
+    "permissions_required": "Camera and Photo Library access are essential for profile image functionality",
+    "permissions_title": "Profile Image Permissions",
+    "permissions_description": "EventFit needs access to your camera and photo library to help you create a personalized profile. This allows you to:\n\n• Take a new photo directly in the app\n• Choose an existing photo from your gallery\n• Customize your profile picture with ease\n\nYour privacy is important. We only access images when you explicitly choose to upload a profile photo.",
+    "continue_text": "Grant Permissions",
+    "cancel": "Not Now",
+
+    
+    "permissions_denied_title": "Permissions Denied",
+    "permissions_denied_description": "It seems you have permanently denied camera or photo library access. To use this feature, you'll need to enable permissions in your device settings.",
+    "open_settings": "Open Settings",
+    "cancel":"cancel",
+
+
+
+    "welcome_back": "Welcome Back",
+    "create_account": "Create Account", 
+    "sign_in_to_continue": "Sign in to continue",
+    "create_account_start": "Create your account to get started",
+    "email_label": "Email",
+    "email_required": "Email is required",
+    "email_invalid": "Please enter a valid email",
+    "password_label": "Password",
+    "password_required": "Password is required", 
+    "password_length": "Password must be at least 8 characters",
+    "username_label": "Username",
+    "username_required": "Username is required",
+    "forgot_password": "Forgot Password?",
+    "sign_in_button": "Sign In",
+    "create_account_button": "Create Account",
+    "no_account": "Don't have an account? ",
+    "have_account": "Already have an account? ",
+    "sign_up": "Sign up",
+    "sign_in": "Sign in",
+    "profile_image_missing": "Attention, profile picture is missing",
+    "registration_failed": "Registration failed. Please try again.",
+    "login_failed": "Login failed. Please try again.",
+    "account_not_present": "Account not present",
+    "accept_privacy_policy":"I accept the ",
+    "privacy_policy":"Privacy Policy",
+
+
+    
+    "select_location": "Select Location",
+    "loading_location": "Loading location...",
+    "current_location": "Current Location",
+    "selected_location": "Selected Location",
+    "location_permission_title": "Allow Location Access",
+    "location_permission_required_message": "Enable location access to enhance your event discovery experience. With your permission, we can:\n\n• Discover nearby events tailored to your location\n• Show events and venues closest to you\n• Provide personalized event recommendations based on your area\n• Help you easily find and navigate to local events",
+    "location_permission_disabled_title": "Location Access Needed",
+    "location_permission_permanent_denied_message": "Location access is crucial for personalized event recommendations. Please go to your device settings and enable location permissions for this app to unlock full functionality.",
+    "location_error_title": "Location Detection Issue",
+    "location_error_message": "We couldn't retrieve your current location. Please check your device settings or try again.",
+    "ok": "OK",
+    "settings": "Settings",
+    "cancel": "Cancel"
+
+
+}

@@ -791,7 +791,7 @@ class _ProfilePageState extends State<ProfilePage>
         },
       );
 
-      // Mostra SnackBar solo se non ci sono dettagli
+      /* Mostra SnackBar solo se non ci sono dettagli
       if (!hasDetails && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -799,9 +799,8 @@ class _ProfilePageState extends State<ProfilePage>
             backgroundColor: Colors.red,
           ),
         );
-      }
+      }*/
     } catch (e) {
-      print('Error in _handleImageLongPress: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

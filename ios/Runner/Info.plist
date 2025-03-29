@@ -6,6 +6,11 @@
 	<true/>
 	<key>NSCalendarsUsageDescription</key>
 	<string>This app uses the calendar to help you organize your events.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>https</string>
+		<string>http</string>
+	</array>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
@@ -31,13 +36,13 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Questa app necessita della fotocamera per scattare foto</string>
+	<string>This app needs camera access to take photos</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Abbiamo bisogno della tua posizione per fornire funzionalità avanzate.</string>
+	<string>We need your location to provide advanced features.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Location permission is required.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Questa app necessita della libreria fotografica per caricare foto</string>
+	<string>This app needs access to the photo library to upload photos</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
