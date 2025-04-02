@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:social_flutter_giorgio/auth.dart';
 import 'package:social_flutter_giorgio/screens/AuthPage.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -95,8 +96,8 @@ class _SettingsPageState extends State<SettingsPage> {
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               leading: const Icon(Icons.delete, color: Colors.red, size: 28),
-              title: const Text(
-                'Delete Account',
+              title: Text(
+                AppLocalizations.of(context).delete_account,
                 style:
                     TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
               ),
@@ -106,24 +107,23 @@ class _SettingsPageState extends State<SettingsPage> {
                   context: context,
                   builder: (BuildContext context) {
                     return AlertDialog(
-                      title: const Text('Conferma Eliminazione Account'),
-                      content: const Text(
-                          'Sei sicuro di voler procedere con l\'eliminazione del tuo account? Questa è un\'azione irreversibile.'),
+                      title: Text(
+                          AppLocalizations.of(context).conferm_delete_account),
+                      content: Text(AppLocalizations.of(context).conferm_mex),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.of(context).pop(false),
-                          child: const Text('No, annulla'),
+                          child: Text(AppLocalizations.of(context).cancel_mex),
                         ),
                         TextButton(
                           onPressed: () => Navigator.of(context).pop(true),
-                          child: const Text('Sì, procedi'),
+                          child: Text(AppLocalizations.of(context).proceed),
                         ),
                       ],
                     );
                   },
                 );
 
-                // Resto del codice di eliminazione account rimane invariato
                 if (confirmDelete == true) {
                   final TextEditingController emailController =
                       TextEditingController();
@@ -131,16 +131,17 @@ class _SettingsPageState extends State<SettingsPage> {
                     context: context,
                     builder: (BuildContext context) {
                       return AlertDialog(
-                        title: const Text('Conferma Eliminazione'),
+                        title: Text(AppLocalizations.of(context)
+                            .conferm_delete_account),
                         content: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Text(
-                                'Per procedere, inserisci la tua email:'),
+                            Text(AppLocalizations.of(context).email),
                             TextField(
                               controller: emailController,
-                              decoration: const InputDecoration(
-                                hintText: 'Inserisci la tua email',
+                              decoration: InputDecoration(
+                                hintText:
+                                    AppLocalizations.of(context).enter_email,
                               ),
                             ),
                           ],
@@ -148,7 +149,8 @@ class _SettingsPageState extends State<SettingsPage> {
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.of(context).pop(false),
-                            child: const Text('Annulla'),
+                            child:
+                                Text(AppLocalizations.of(context).cancel_mex),
                           ),
                           TextButton(
                             onPressed: () {
@@ -156,14 +158,15 @@ class _SettingsPageState extends State<SettingsPage> {
                                 Navigator.of(context).pop(true);
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Email non corrispondente'),
+                                  SnackBar(
+                                    content: Text(AppLocalizations.of(context)
+                                        .email_match),
                                     backgroundColor: Colors.red,
                                   ),
                                 );
                               }
                             },
-                            child: const Text('Conferma'),
+                            child: Text(AppLocalizations.of(context).confirm),
                           ),
                         ],
                       );
@@ -191,8 +194,9 @@ class _SettingsPageState extends State<SettingsPage> {
 
                       if (response.statusCode == 200) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Account eliminato con successo'),
+                          SnackBar(
+                            content: Text(AppLocalizations.of(context)
+                                .successfully_delete),
                             backgroundColor: Colors.green,
                           ),
                         );

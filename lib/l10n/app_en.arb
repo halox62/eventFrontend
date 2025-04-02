@@ -1,6 +1,6 @@
 {
     "@@locale": "en",
-    "appTitle": "Flutter Demo",
+    "appTitle": "EventFit",
     "homePageTitle": "Flutter Home Page",
 
     
@@ -58,7 +58,980 @@
     "location_error_message": "We couldn't retrieve your current location. Please check your device settings or try again.",
     "ok": "OK",
     "settings": "Settings",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
 
 
+    "delete_account":"Delete Account",
+    "conferm_delete_account":"Confirm account deletion",
+    "conferm_mex":"Are you sure you want to proceed with deleting your account? This is an irreversible action",
+    "cancel_mex":"No, cancel",
+    "proceed":"Yes, proceed",
+    "email":"To proceed, enter your email:",
+    "enter_email":"Enter your email",
+    "email_match":"Email does not match",
+    "confirm":"confirm",
+    "successfully_delete":"Account successfully deleted",
+
+
+       
+    
+    
+    
+    "loading_events": "Loading events...",
+    "@loading_events": {
+        "description": "Message shown while loading events"
+    },
+    
+    "error": "Error",
+    "@error": {
+        "description": "Generic error message"
+    },
+    
+    "delete_successfully": "Event deleted successfully",
+    "@delete_successfully": {
+        "description": "Message shown when an event is successfully deleted"
+    },
+    
+    "error_delete": "Error deleting the event",
+    "@error_delete": {
+        "description": "Error message specific to event deletion"
+    },
+
+    "conferm_delete": "Conferm Delete",
+    "@conferm_delete": {
+        "description": "conferm_delete messagge"
+    },
+    
+    "conferm_delete_event": "Do you confirm the deletion of the event \"$eventName\"?",
+    "@conferm_delete_event": {
+        "description": "Confirmation message for deleting an event, with a placeholder for the event name",
+        "placeholders": {
+        "eventName": {}
+        }
+    },
+    
+    "cancel": "Cancel",
+    "@cancel": {
+        "description": "Text for the cancel action button"
+    },
+
+    "delete": "Delete",
+    "@delete": {
+        "description": "Text for the delete action button"
+    },
+    
+    "deleting_event_in_progress": "Deleting event in progress...",
+    "@deleting_event_in_progress": {
+        "description": "Message shown in the loading dialog during event deletion"
+    },
+    
+    "event_details": "Event Details",
+    "@event_details": {
+        "description": "Title of the event details dialog"
+    },
+    
+    "code": "Code",
+    "@code": {
+        "description": "Label for the event code field"
+    },
+    
+    "start_date": "Start Date",
+    "@start_date": {
+        "description": "Label for the event start date field"
+    },
+    
+    "start_time": "Start Time",
+    "@start_time": {
+        "description": "Label for the event start time field"
+    },
+    
+    "view_details": "View Details",
+    "@view_details": {
+        "description": "Text for the button to view event details"
+    },
+    
+    "no_events_found": "No events found for this date",
+    "@no_events_found": {
+        "description": "Message shown when no events are found for a selected date"
+    },
+    
+    "event_qr_code": "Event QR Code",
+    "@event_qr_code": {
+        "description": "Title of the QR code dialog"
+    },
+    
+    "code_copied": "Code copied to clipboard",
+    "@code_copied": {
+        "description": "Message shown when the event code is copied to clipboard"
+    },
+
+    "copi_code": "copi code",
+    "@copi_code": {
+        "description": "copi code"
+    },
+    
+    "share": "Share",
+    "@share": {
+        "description": "Text for the share action button"
+    },
+
+    "error_generate_qr": "Error generating QR Code",
+    "@error_generate_qr": {
+        "description": "Error to generate qrcode"
+    },
+    
+    "events_calendar": "Events Calendar",
+    "@events_calendar": {
+        "description": "Title of the events calendar screen"
+    },
+    
+    "add_event_code": "Add event code",
+    "@add_event_code": {
+        "description": "Title of the dialog to add an event code"
+    },
+    
+    "scan_qr_code": "Scan QR Code",
+    "@scan_qr_code": {
+        "description": "Text for the button to scan a QR code"
+    },
+
+    "or": "or",
+    "@or": {
+        "description": "or"
+    },
+    
+    "event_code": "Event Code",
+    "@event_code": {
+        "description": "Label for the event code input field"
+    },
+    
+    "enter_8_characters": "Enter 8 characters",
+    "@enter_8_characters": {
+        "description": "Hint text for the event code input field"
+    },
+    
+    "warning_incorrect_code": "Warning: incorrect code!",
+    "@warning_incorrect_code": {
+        "description": "Message shown when an incorrect event code is entered"
+    },
+    
+    "confirm": "Confirm",
+    "@confirm": {
+        "description": "Text for the confirm action button"
+    },
+    
+    "create_event": "Create Event",
+    "@create_event": {
+        "description": "Title of the create event dialog and text for the create event button"
+    },
+    
+    "event_name": "Event Name",
+    "@event_name": {
+        "description": "Label for the event name input field"
+    },
+    
+    "date": "Date",
+    "@date": {
+        "description": "Label for the date selection field"
+    },
+    
+    "time": "Time",
+    "@time": {
+        "description": "Label for the time selection field"
+    },
+    
+    "location": "Location",
+    "@location": {
+        "description": "Label for the location selection field"
+    },
+    
+    "select": "Select",
+    "@select": {
+        "description": "Default value for selection fields before a choice is made"
+    },
+    
+    "event_added_successfully": "Event added successfully!",
+    "@event_added_successfully": {
+        "description": "Message shown when an event is successfully added"
+    },
+
+    "event_create_successfully": "Event create successfully!",
+    "@event_added_successfully": {
+        "description": "Message shown when an event is successfully create"
+    },
+    
+    "event_not_created": "Event not created!",
+    "@event_not_created": {
+        "description": "Message shown when event creation fails"
+    },
+    
+    "error_creating_event": "Error during event creation",
+    "@error_creating_event": {
+        "description": "Message shown when an error occurs during event creation"
+    },
+    
+    "date_before_today": "The selected date is earlier than today!",
+    "@date_before_today": {
+        "description": "Message shown when the selected date is in the past"
+    },
+    
+    "time_already_passed": "The selected time has already passed!",
+    "@time_already_passed": {
+        "description": "Message shown when the selected time is earlier than the current time"
+    },
+    
+    "creating_event_in_progress": "Creating event in progress...",
+    "@creating_event_in_progress": {
+        "description": "Message shown in the loading dialog during event creation"
+    },
+
+    "add_event_in_progress": "Add event in progress...",
+    "@add_event_in_progress": {
+        "description": "Message shown in the loading dialog during event add"
+    },
+
+    
+    
+    "share_your_qr_code": "Share your QR Code!",
+    "@share_your_qr_code": {
+        "description": "Message encouraging the user to share the QR code"
+    },
+    
+    "close": "Close",
+    "@close": {
+        "description": "Text for the close action button"
+    },
+    
+    "connection_error_during_deletion": "Connection error during deletion",
+    "@connection_error_during_deletion": {
+        "description": "Message shown when a network error occurs during event deletion"
+    },
+
+  
+    "loading_events": "Loading Events",
+    "@loading_events": {
+      "description": "Message shown while loading event data"
+    },
+    
+    "no_info_available": "No information available",
+    "@no_info_available": {
+      "description": "Message shown when no event information is available"
+    },
+    
+    "event_not_started": "The event has not yet started",
+    "@event_not_started": {
+      "description": "Message shown in the countdown dialog when the event hasn't started"
+    },
+    
+    "event_start_time": "Event start time: {time}",
+    "@event_start_time": {
+      "description": "Message showing the scheduled start time of the event",
+      "placeholders": {
+        "time": {}
+      }
+    },
+    
+    "hours": "Hours",
+    "@hours": {
+      "description": "Label for hours in the countdown timer"
+    },
+    
+    "minutes": "Minutes",
+    "@minutes": {
+      "description": "Label for minutes in the countdown timer"
+    },
+    
+    "seconds": "Seconds",
+    "@seconds": {
+      "description": "Label for seconds in the countdown timer"
+    },
+    
+    "return_to_home": "Return to Home",
+    "@return_to_home": {
+      "description": "Text for the button to return to the home page"
+    },
+    
+    "refresh_error": "Error during refresh",
+    "@refresh_error": {
+      "description": "Message shown when an error occurs during refresh"
+    },
+
+    "loading_error": "Error during Loading",
+    "@refresh_error": {
+      "description": "Message shown when an error occurs during loading"
+    },
+    
+    "position_ok": "Position OK",
+    "@position_ok": {
+      "description": "Message shown when the user is within the event location range"
+    },
+    
+    "too_far_from_event": "You are too far from the event",
+    "@too_far_from_event": {
+      "description": "Message shown when the user is too far from the event location"
+    },
+    
+    "dismiss": "Dismiss",
+    "@dismiss": {
+      "description": "Label for the dismiss action in snackbars"
+    },
+    
+    "ranking": "Ranking",
+    "@ranking": {
+      "description": "Title of the ranking modal"
+    },
+    
+    "no_photos_in_ranking": "No photos in ranking",
+    "@no_photos_in_ranking": {
+      "description": "Message shown when there are no photos in the ranking"
+    },
+    
+    "event_title": "Event {name}",
+    "@event_title": {
+      "description": "Title of the event page with a placeholder for the event name",
+      "placeholders": {
+        "name": {}
+      }
+    },
+    
+    "no_photos": "No Photos",
+    "@no_photos": {
+      "description": "Message shown when there are no event photos"
+    },
+    
+    "likes": "{count} likes",
+    "@likes": {
+      "description": "Text showing the number of likes for a photo",
+      "placeholders": {
+        "count": {}
+      }
+    },
+    
+    "image_not_available": "Image not available",
+    "@image_not_available": {
+      "description": "Message shown when an image fails to load"
+    },
+    
+    "no_details_available": "No details available",
+    "@no_details_available": {
+      "description": "Message shown when no photo details are available"
+    },
+    
+    "operation_error": "Error during operation",
+    "@operation_error": {
+      "description": "Generic error message for failed operations"
+    },
+    
+    "swipe_up_for_details": "Swipe up for details",
+    "@swipe_up_for_details": {
+      "description": "Instruction shown to swipe up for photo details"
+    },
+    
+    "photo_details": "Photo Details",
+    "@photo_details": {
+      "description": "Title of the photo details modal"
+    },
+    
+    "type": "Type: {value}",
+    "@type": {
+      "description": "Label for the type field in photo details",
+      "placeholders": {
+        "value": {}
+      }
+    },
+    
+    "brand_input_label": "Brand",
+    "@brand_input_label": {
+      "description": "Label for the brand input field in the form"
+    },
+    
+  
+    "model_input_label": "Model",
+    "@model_input_label": {
+      "description": "Label for the model input field in the form"
+    },
+
+    "feedback_input_label": "Feedback",
+    "@feedback_input_label": {
+      "description": "Label for the feedback input field in the form"
+    },
+
+    "brand": "Brand: {value}",
+    "@brand": {
+      "description": "Label for the brand field in photo details",
+      "placeholders": {
+        "value": {}
+      }
+    },
+    "model": "Model: {value}",
+    "@model": {
+      "description": "Label for the model field in photo details",
+      "placeholders": {
+        "value": {}
+      }
+    },
+    "feedback": "Feedback: {value}",
+    "@feedback": {
+      "description": "Label for the feedback field in photo details",
+      "placeholders": {
+        "value": {}
+      }
+    },
+
+    
+    "photo_saved_successfully": "Photo saved successfully",
+    "@photo_saved_successfully": {
+      "description": "Message shown when a photo is saved successfully"
+    },
+
+    "try_again": "Try again",
+    "@try_again": {
+      "description": "try_again"
+    },
+
+    "no_photos_saved": "No photos saved",
+    "@no_photos_save": {
+      "description": "no_photo_save"
+    },
+
+    "photos_saved": "The photos you save will appear here",
+    "@photos_save": {
+      "description": "photos_save"
+    },
+
+    "load_image_error": "Unable to load image'",
+    "@load_image_error": {
+      "description": "load_image_error"
+    },
+    
+    
+    "save_photo_error": "Unable to save the photo. Try again later.",
+    "@save_photo_error": {
+      "description": "Message shown when saving a photo fails"
+    },
+
+   
+  
+    "forgot_password_title": "Forgot Password",
+    "@forgot_password_title": {
+      "description": "Title of the forgot password page"
+    },
+    
+    "enter_email_instructions": "Enter your email to receive a password reset link.",
+    "@enter_email_instructions": {
+      "description": "Instructions shown above the email input field"
+    },
+    
+    "email_label": "Email",
+    "@email_label": {
+      "description": "Label for the email input field"
+    },
+    
+    "send_reset_email": "Send Reset Email",
+    "@send_reset_email": {
+      "description": "Text for the button to send the reset email"
+    },
+    
+    "reset_email_sent": "Reset email sent to {email}",
+    "@reset_email_sent": {
+      "description": "Message shown when the reset email is sent successfully",
+      "placeholders": {
+        "email": {}
+      }
+    },
+    
+    "invalid_email": "Invalid email.",
+    "@invalid_email": {
+      "description": "Error message for an invalid email format"
+    },
+    
+    "user_not_found": "User not found.",
+    "@user_not_found": {
+      "description": "Error message when no user is found with the provided email"
+    },
+    
+    "something_went_wrong": "Something went wrong.",
+    "@something_went_wrong": {
+      "description": "Generic error message for unexpected issues"
+    },
+    
+    "unknown_error": "Unknown error.",
+    "@unknown_error": {
+      "description": "Error message for an unspecified error"
+    },
+    
+    "enter_valid_email": "Enter a valid email.",
+    "@enter_valid_email": {
+      "description": "Message shown when the email field is empty or invalid"
+    },
+
+ 
+  
+    "error_title": "Error",
+    "@error_title": {
+      "description": "Title shown in the dialog when an error occurs"
+    },
+    
+    "email_not_available": "Email not available",
+    "@email_not_available": {
+      "description": "Message shown when the email is null"
+    },
+    
+    "close": "Close",
+    "@close": {
+      "description": "Text for the button to close the dialog"
+    },
+    
+    "share_profile_title": "Share Profile",
+    "@share_profile_title": {
+      "description": "Title of the share profile dialog"
+    },
+    
+    "profile_link_label": "Profile link:",
+    "@profile_link_label": {
+      "description": "Label shown above the profile URL"
+    },
+    
+    "copy_link": "Copy link",
+    "@copy_link": {
+      "description": "Tooltip text for the copy button"
+    },
+    
+    "link_copied": "Link copied to clipboard",
+    "@link_copied": {
+      "description": "Message shown when the link is copied to the clipboard"
+    },
+    
+    "share": "Share",
+    "@share": {
+      "description": "Text for the share button"
+    },
+    
+    "view_my_profile": "View my profile: {url}",
+    "@view_my_profile": {
+      "description": "Text used when sharing the profile link",
+      "placeholders": {
+        "url": {}
+      }
+    },
+    
+    "share_profile_subject": "Share Profile",
+    "@share_profile_subject": {
+      "description": "Subject line used when sharing the profile link"
+    },
+
+   
+    "loading": "Loading",
+    "@loading": {
+      "description": "Message shown in loading dialogs"
+    },
+    
+    "refresh_error": "Error during refresh",
+    "@refresh_error": {
+      "description": "Message shown when an error occurs during refresh"
+    },
+    
+    "camera_permission_title": "Camera Permission",
+    "@camera_permission_title": {
+      "description": "Title of the camera permission dialog"
+    },
+    
+    "camera_permission_message": "To use this feature, you need to grant camera permissions.",
+    "@camera_permission_message": {
+      "description": "Message in the camera permission dialog"
+    },
+    
+    "cancel": "Cancel",
+    "@cancel": {
+      "description": "Text for cancel buttons"
+    },
+    
+    "open_settings": "Open Settings",
+    "@open_settings": {
+      "description": "Text for the button to open app settings"
+    },
+    
+    "photo_not_uploaded": "Photo not uploaded",
+    "@photo_not_uploaded": {
+      "description": "Error message when photo upload fails"
+    },
+    
+    "too_far_from_event": "Photo not uploaded, you are too far from the event",
+    "@too_far_from_event": {
+      "description": "Error message when user is too far from the event location"
+    },
+    
+    "photo_uploaded_success": "Photo uploaded successfully",
+    "@photo_uploaded_success": {
+      "description": "Success message when photo is uploaded without event"
+    },
+    
+    "photo_uploaded_event_success": "Photo uploaded to event successfully!",
+    "@photo_uploaded_event_success": {
+      "description": "Success message when photo is uploaded to an event"
+    },
+    
+    "select_event": "Select an Event",
+    "@select_event": {
+      "description": "Title of the event selection dialog"
+    },
+    
+    "code_label": "Code: {code}",
+    "@code_label": {
+      "description": "Label showing the event code",
+      "placeholders": {
+        "code": {}
+      }
+    },
+    
+    "choose_event": "Choose Event",
+    "@choose_event": {
+      "description": "Text for the button to choose an event"
+    },
+    
+    "upload_without_event": "Upload without Event",
+    "@upload_without_event": {
+      "description": "Text for the button to upload without selecting an event"
+    },
+    
+    "upload_photo": "Upload Photo",
+    "@upload_photo": {
+      "description": "Title of the photo upload dialog"
+    },
+    
+    "event_enrollment_prompt": "You are enrolled in some events. Do you want to upload the photo to one of them?",
+    "@event_enrollment_prompt": {
+      "description": "Prompt asking if the user wants to upload to an event"
+    },
+    
+    "uploading_photo": "Uploading photo...",
+    "@uploading_photo": {
+      "description": "Message shown while uploading a photo"
+    },
+    
+    "details_uploaded_success": "Details uploaded successfully",
+    "@details_uploaded_success": {
+      "description": "Success message when outfit details are uploaded"
+    },
+    
+    "details_error": "Error in Details",
+    "@details_error": {
+      "description": "Error message when uploading outfit details fails"
+    },
+    
+    "all_items_uploaded_success": "All items uploaded successfully",
+    "@all_items_uploaded_success": {
+      "description": "Success message when all outfit items are uploaded"
+    },
+    
+    "item_upload_error": "Error uploading details for {item}",
+    "@item_upload_error": {
+      "description": "Error message when uploading details for a specific item fails",
+      "placeholders": {
+        "item": {}
+      }
+    },
+    
+    "gallery": "Gallery",
+    "@gallery": {
+      "description": "Label for the gallery option"
+    },
+    
+    "camera": "Camera",
+    "@camera": {
+      "description": "Label for the camera option"
+    },
+    
+    "select_outfit_items": "Select your outfit items",
+    "@select_outfit_items": {
+      "description": "Title of the outfit item selection sheet"
+    },
+    
+    "save_outfit": "Save outfit ({details}/{total} details added)",
+    "@save_outfit": {
+      "description": "Text for the save outfit button with detail count",
+      "placeholders": {
+        "details": {},
+        "total": {}
+      }
+    },
+    
+    "selected_items": "Selected items:",
+    "@selected_items": {
+      "description": "Label for the list of selected items"
+    },
+    
+    "edit": "Edit",
+    "@edit": {
+      "description": "Text for the edit button"
+    },
+    
+    "add_details": "Add details",
+    "@add_details": {
+      "description": "Text for the add details button"
+    },
+    
+    "details_item": "Details {item}",
+    "@details_item": {
+      "description": "Title for the details form of a specific item",
+      "placeholders": {
+        "item": {}
+      }
+    },
+    
+    "brand_label": "Brand",
+    "@brand_label": {
+      "description": "Label for the brand input field"
+    },
+    
+    "model_label": "Model/Collection",
+    "@model_label": {
+      "description": "Label for the model input field"
+    },
+    
+    "feedback_label": "Feedback: {value}",
+    "@feedback_label": {
+      "description": "Label for the feedback field in photo details",
+      "placeholders": {
+        "value": {}
+      }
+    },
+    
+    "enter_brand": "Enter the brand name",
+    "@enter_brand": {
+      "description": "Validation message for the brand field"
+    },
+    
+    "back": "Back",
+    "@back": {
+      "description": "Text for the back button"
+    },
+    
+    "save": "Save",
+    "@save": {
+      "description": "Text for the save button"
+    },
+    
+    "camera_opening": "Opening camera...",
+    "@camera_opening": {
+      "description": "Message shown while opening the camera"
+    },
+    
+    "gallery_opening": "Opening gallery...",
+    "@gallery_opening": {
+      "description": "Message shown while opening the gallery"
+    },
+    
+    "camera_error": "An error occurred with the camera",
+    "@camera_error": {
+      "description": "Error message when camera fails"
+    },
+    
+    "gallery_error": "An error occurred with the gallery",
+    "@gallery_error": {
+      "description": "Error message when gallery fails"
+    },
+    
+    "event_check": "Checking events...",
+    "@event_check": {
+      "description": "Message shown while checking event enrollment"
+    },
+    
+    "generic_error": "An error occurred",
+    "@generic_error": {
+      "description": "Generic error message"
+    },
+    
+    "no_photos_available": "No photos available",
+    "@no_photos_available": {
+      "description": "Message shown when there are no photos"
+    },
+    
+    "points_label": "{points} points",
+    "@points_label": {
+      "description": "Label showing the user's points",
+      "placeholders": {
+        "points": {}
+      }
+    },
+    
+    "save_label": "{save} save",
+    "@save_label": {
+      "description": "Label showing the user's saves",
+      "placeholders": {
+        "save": {}
+      }
+    },
+    
+    "photo_deleted_success": "Photo deleted successfully",
+    "@photo_deleted_success": {
+      "description": "Success message when a photo is deleted"
+    },
+    
+    "photo_deletion_error": "Error: unable to delete photo",
+    "@photo_deletion_error": {
+      "description": "Error message when photo deletion fails"
+    },
+    
+    "connection_error": "Connection error",
+    "@connection_error": {
+      "description": "Error message for network issues"
+    },
+    
+    "profiles_title": "Profiles",
+    "@profiles_title": {
+      "description": "Title of the search results dialog"
+    },
+    
+    "close": "Close",
+    "@close": {
+      "description": "Text for the close button"
+    },
+    
+    "search_hint": "Search...",
+    "@search_hint": {
+      "description": "Hint text for the search field"
+    },
+    
+    "menu": "Menu",
+    "@menu": {
+      "description": "Title of the navigation drawer"
+    },
+    
+    "home": "Home",
+    "@home": {
+      "description": "Label for the home menu item"
+    },
+    
+    "scoreboard": "Scoreboard",
+    "@scoreboard": {
+      "description": "Label for the scoreboard menu item"
+    },
+    
+    "event": "Event",
+    "@event": {
+      "description": "Label for the event menu item"
+    },
+    
+    "save_menu": "Save",
+    "@save_menu": {
+      "description": "Label for the save menu item"
+    },
+    
+    "connect": "Connect",
+    "@connect": {
+      "description": "Label for the connect menu item"
+    },
+    
+    "settings": "Settings",
+    "@settings": {
+      "description": "Label for the settings menu item"
+    },
+    
+    "logout": "Logout",
+    "@logout": {
+      "description": "Label for the logout button"
+    },
+    
+    "email_not_available": "Email not available",
+    "@email_not_available": {
+      "description": "Message shown when email is not available"
+    },
+    
+    "photo_deletion": "Photo Deletion",
+    "@photo_deletion": {
+      "description": "Message shown while deleting a photo"
+    },
+    
+    "confirm_deletion": "Confirm Deletion",
+    "@confirm_deletion": {
+      "description": "Title of the photo deletion confirmation dialog"
+    },
+    
+    "delete_confirmation": "Are you sure you want to delete this photo?",
+    "@delete_confirmation": {
+      "description": "Message in the photo deletion confirmation dialog"
+    },
+    
+    "delete": "Delete",
+    "@delete": {
+      "description": "Text for the delete button"
+    },
+    
+    "photo_saved_success": "Photo saved successfully",
+    "@photo_saved_success": {
+      "description": "Success message when a photo is saved"
+    },
+    
+    "save_photo_error": "Unable to save the photo. Try again later.",
+    "@save_photo_error": {
+      "description": "Error message when saving a photo fails"
+    },
+    
+    "operation_error": "Error during operation",
+    "@operation_error": {
+      "description": "Generic error message for failed operations"
+    },
+    
+    "photo_details": "Photo Details",
+    "@photo_details": {
+      "description": "Title of the photo details modal"
+    },
+    
+    "type_label": "Type: {value}",
+    "@type_label": {
+      "description": "Label for the type field in photo details",
+      "placeholders": {
+        "value": {}
+      }
+    },
+    
+    "brand_label": "Brand: {value}",
+    "@brand_label": {
+      "description": "Label for the brand field in photo details",
+      "placeholders": {
+        "value": {}
+      }
+    },
+    
+    "model_label": "Model: {value}",
+    "@model_label": {
+      "description": "Label for the model field in photo details",
+      "placeholders": {
+        "value": {}
+      }
+    },
+    
+    "feedback_label": "Feedback: {value}",
+    "@feedback_label": {
+      "description": "Label for the feedback field in photo details",
+      "placeholders": {
+        "value": {}
+      }
+    },
+    
+    "swipe_up_for_details": "Swipe up for details",
+    "@swipe_up_for_details": {
+      "description": "Instruction shown to swipe up for photo details"
+    },
+    
+    "username_updated_success": "Username updated successfully",
+    "@username_updated_success": {
+      "description": "Success message when username is updated"
+    },
+    
+    "username_update_failed": "Username not updated",
+    "@username_update_failed": {
+      "description": "Error message when username update fails"
+    },
+
+    "already_save": "You have already saved this photo",
+    "@already_save": {
+      "description": "already_save"
+    }
+
+    
+
+
+    
 }

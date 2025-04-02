@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:social_flutter_giorgio/auth.dart';
 import 'package:social_flutter_giorgio/screens/AuthPage.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class ProfilePage extends StatefulWidget {
   final String email;
@@ -489,7 +490,7 @@ class _ProfilePageState extends State<ProfilePage>
     return GestureDetector(
       onTap: () => _handleImageLongPress(index),
       child: Hero(
-        tag: 'image_${index}',
+        tag: 'image_$index',
         child: CachedNetworkImage(
           imageUrl: images[index],
           fit: BoxFit.cover,
@@ -518,20 +519,8 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-// Metodo modificato per gestire il tap sull'immagine
-  void _handleImageTap(int index) {
-    setState(() {
-      if (isImageEnlarged && enlargedImageIndex == index) {
-        isImageEnlarged = false;
-        enlargedImageIndex = null;
-      } else {
-        isImageEnlarged = true;
-        enlargedImageIndex = index;
-      }
-    });
-  }
-
   Future<void> _handleImageLongPress(int index) async {
+    if (isImageEnlarged) return;
     try {
       setState(() {
         enlargedImageIndex = index;
@@ -569,6 +558,10 @@ class _ProfilePageState extends State<ProfilePage>
         isLoading = false;
       }
 
+      // Aggiungiamo il TransformationController
+      final TransformationController transformationController =
+          TransformationController();
+
       // Mostra il dialog comunque, anche se non ci sono dettagli
       animationController = AnimationController(
         duration: const Duration(seconds: 1),
@@ -601,7 +594,7 @@ class _ProfilePageState extends State<ProfilePage>
                 ))
               : null;
 
-          final imageUrl = images[index]?.toString() ??
+          final imageUrl = images[index].toString() ??
               'https://via.placeholder.com/150'; // Assumo che l'URL sia in images[index]
 
           return Dialog(
@@ -613,10 +606,15 @@ class _ProfilePageState extends State<ProfilePage>
                 GestureDetector(
                   onTap: () => Navigator.pop(dialogContext),
                   child: InteractiveViewer(
+                    transformationController: transformationController,
                     panEnabled: true,
                     boundaryMargin: const EdgeInsets.all(80),
                     minScale: 0.5,
                     maxScale: 4,
+                    onInteractionEnd: (_) {
+                      // Resetta la trasformazione quando l'utente finisce di interagire
+                      transformationController.value = Matrix4.identity();
+                    },
                     child: Container(
                       color: Colors.black.withOpacity(0.9),
                       child: Center(
@@ -630,10 +628,11 @@ class _ProfilePageState extends State<ProfilePage>
                                     child: CircularProgressIndicator());
                           },
                           errorBuilder: (context, error, stackTrace) {
-                            return const Center(
+                            return Center(
                               child: Text(
-                                'Immagine non disponibile',
-                                style: TextStyle(color: Colors.white),
+                                AppLocalizations.of(context)
+                                    .image_not_available,
+                                style: const TextStyle(color: Colors.white),
                               ),
                             );
                           },
@@ -646,12 +645,9 @@ class _ProfilePageState extends State<ProfilePage>
                   GestureDetector(
                     onVerticalDragUpdate: (details) {
                       totalDragDistance += details.primaryDelta!;
-                      print('Total drag distance: $totalDragDistance');
                     },
                     onVerticalDragEnd: (details) async {
-                      print('Drag end velocity: ${details.primaryVelocity}');
                       if (totalDragDistance < -50 && photoData != null) {
-                        print('Swipe up detected!');
                         isDetailsLoading = true;
                         await showModalBottomSheet(
                           context: dialogContext,
@@ -693,11 +689,12 @@ class _ProfilePageState extends State<ProfilePage>
                                               BorderRadius.circular(2),
                                         ),
                                       ),
-                                      const Padding(
-                                        padding: EdgeInsets.all(20),
+                                      Padding(
+                                        padding: const EdgeInsets.all(20),
                                         child: Text(
-                                          'Dettagli Foto',
-                                          style: TextStyle(
+                                          AppLocalizations.of(context)
+                                              .photo_details,
+                                          style: const TextStyle(
                                               fontSize: 24,
                                               fontWeight: FontWeight.bold),
                                         ),
@@ -726,16 +723,37 @@ class _ProfilePageState extends State<ProfilePage>
                                                       CrossAxisAlignment.start,
                                                   children: [
                                                     Text(
-                                                        'Tipo: ${item['type'] ?? 'N/A'}'),
+                                                      AppLocalizations.of(
+                                                              context)
+                                                          .type_label(
+                                                        item['type'] ?? 'N/A',
+                                                      ),
+                                                    ),
                                                     const SizedBox(height: 8),
                                                     Text(
-                                                        'Marca: ${item['brand'] ?? 'N/A'}'),
+                                                      AppLocalizations.of(
+                                                              context)
+                                                          .brand_label(
+                                                        item['brand'] ?? 'N/A',
+                                                      ),
+                                                    ),
                                                     const SizedBox(height: 8),
                                                     Text(
-                                                        'Modello: ${item['model'] ?? 'N/A'}'),
+                                                      AppLocalizations.of(
+                                                              context)
+                                                          .model_label(
+                                                        item['model'] ?? 'N/A',
+                                                      ),
+                                                    ),
                                                     const SizedBox(height: 8),
                                                     Text(
-                                                        'Feedback: ${item['feedback'] ?? 'N/A'}'),
+                                                      AppLocalizations.of(
+                                                              context)
+                                                          .feedback_label(
+                                                        item['feedback'] ??
+                                                            'N/A',
+                                                      ),
+                                                    ),
                                                   ],
                                                 ),
                                               ),
@@ -769,13 +787,14 @@ class _ProfilePageState extends State<ProfilePage>
                     child: SlideTransition(
                       position: animation,
                       child: Column(
-                        children: const [
-                          Icon(Icons.keyboard_arrow_up,
+                        children: [
+                          const Icon(Icons.keyboard_arrow_up,
                               color: Colors.white, size: 36),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           Text(
-                            'Scorri verso l\'alto per i dettagli',
-                            style: TextStyle(color: Colors.white, fontSize: 14),
+                            AppLocalizations.of(context).swipe_up_for_details,
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 14),
                           ),
                         ],
                       ),
@@ -791,20 +810,14 @@ class _ProfilePageState extends State<ProfilePage>
         },
       );
 
-      /* Mostra SnackBar solo se non ci sono dettagli
-      if (!hasDetails && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Nessun dettaglio disponibile'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }*/
+      // Pulizia dei controller dopo la chiusura del dialog
+      transformationController.dispose();
+      animationController.dispose();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Errore durante l\'operazione'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context).error),
             backgroundColor: Colors.red,
           ),
         );
@@ -862,7 +875,8 @@ class _ProfilePageState extends State<ProfilePage>
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(data['message'] ?? 'Foto salvata con successo'),
+            content: Text(data['message'] ??
+                AppLocalizations.of(context).photo_saved_successfully),
             backgroundColor: Colors.green,
           ),
         );
@@ -871,7 +885,7 @@ class _ProfilePageState extends State<ProfilePage>
         try {
           final Map<String, dynamic> errorData = jsonDecode(response.body);
           throw Exception(
-              errorData['message'] ?? 'Errore durante il salvataggio');
+              errorData['message'] ?? AppLocalizations.of(context).error);
         } catch (e) {
           throw Exception(
               'Errore durante il salvataggio: ${response.statusCode}');

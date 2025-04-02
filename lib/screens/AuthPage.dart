@@ -68,16 +68,62 @@ class _AuthPageState extends State<AuthPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.account_not_present),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showErrorSnackbar(AppLocalizations.of(context).account_not_present);
       }
     }
 
     return false;
+  }
+
+  void _showErrorSnackbar(String message) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final overlay = OverlayEntry(
+        builder: (context) => Positioned(
+          top: MediaQuery.of(context).padding.top + 10,
+          left: 0,
+          right: 0,
+          child: Material(
+            color: Colors.transparent,
+            child: Center(
+              child: Container(
+                width: 300,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: Text(
+                        message,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      Overlay.of(context).insert(overlay);
+
+      Future.delayed(const Duration(seconds: 3), () {
+        overlay.remove();
+      });
+    });
   }
 
   Future<void> signIn() async {
@@ -113,13 +159,8 @@ class _AuthPageState extends State<AuthPage> {
         String errorMessage =
             e.toString().replaceFirst(RegExp(r'\[.*?\] '), '');
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                '${AppLocalizations.of(context)!.login_failed} $errorMessage'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showErrorSnackbar(
+            '${AppLocalizations.of(context).login_failed} $errorMessage');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -151,12 +192,8 @@ class _AuthPageState extends State<AuthPage> {
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.profile_image_missing),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showErrorSnackbar(AppLocalizations.of(context).profile_image_missing);
+
         return;
       }
 
@@ -187,14 +224,8 @@ class _AuthPageState extends State<AuthPage> {
       if (mounted) {
         String errorMessage =
             e.toString().replaceFirst(RegExp(r'\[.*?\] '), '');
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                '${AppLocalizations.of(context)!.registration_failed} $errorMessage'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showErrorSnackbar(
+            '${AppLocalizations.of(context).registration_failed} $errorMessage');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -209,7 +240,7 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   Future<bool> showDialogPermissionDenied() async {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     final result = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
@@ -285,7 +316,7 @@ class _AuthPageState extends State<AuthPage> {
 
   @override
   Widget build(BuildContext context) {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: Colors.white,

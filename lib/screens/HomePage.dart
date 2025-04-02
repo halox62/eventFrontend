@@ -21,6 +21,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,9 +59,6 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
   double? eventLongitude;
   bool hasError = false;
   int save = 0;
-  //String host = "127.0.0.1:5000";
-  //String host = "10.0.2.2:5000";
-  //String host = "event-production.up.railway.app";
   final String host = "www.event-fit.it";
   final TextEditingController _searchController = TextEditingController();
   late List<dynamic> profilesListSearch;
@@ -98,7 +96,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
       }
 
       if (loading) {
-        showLoadingDialog("Loading");
+        showLoadingDialog(AppLocalizations.of(context).loading);
       }
 
       await fetchProfileData();
@@ -106,14 +104,9 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
 
       Navigator.of(_dialogContext).pop();
     } catch (e) {
-      if (mounted) {
+      if (mounted && loading) {
+        _showErrorSnackbar(AppLocalizations.of(context).loading_error);
         Navigator.of(context).maybePop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Errore durante l\'aggiornamento'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
       }
     }
   }
@@ -124,8 +117,8 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Errore durante l\'aggiornamento'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context).refresh_error),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -243,22 +236,21 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
     showDialog(
       context: context,
       builder: (BuildContext context) => AlertDialog(
-        title: const Text("Permesso Fotocamera"),
-        content: const Text(
-            "Per utilizzare questa funzione è necessario concedere i permessi della fotocamera."),
+        title: Text(AppLocalizations.of(context).camera_permission_title),
+        content: Text(AppLocalizations.of(context).camera_permission_message),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text(
-              "Annulla",
-              style: TextStyle(color: Colors.black),
+            child: Text(
+              AppLocalizations.of(context).cancel,
+              style: const TextStyle(color: Colors.black),
             ),
           ),
           TextButton(
             onPressed: () => openAppSettings(),
-            child: const Text(
-              "Apri Impostazioni",
-              style: TextStyle(color: Colors.black),
+            child: Text(
+              AppLocalizations.of(context).open_settings,
+              style: const TextStyle(color: Colors.black),
             ),
           ),
         ],
@@ -291,7 +283,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
       }
       return jsonResponse['id'].toString();
     } else {
-      _showErrorSnackbar("Foto non caricata");
+      _showErrorSnackbar(AppLocalizations.of(context).photo_not_uploaded);
       _checkTokenValidity(response.statusCode);
       return "-1";
     }
@@ -368,8 +360,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
           return jsonResponse['id'].toString();
         } else {
           if (response.statusCode == 403) {
-            _showErrorSnackbar(
-                "Foto non caricata sei troppo lontano dall'evento");
+            _showErrorSnackbar(AppLocalizations.of(context).too_far_from_event);
           } else {
             _checkTokenValidity(response.statusCode);
           }
@@ -385,7 +376,6 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
 
   void _showErrorSnackbar(String message) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Crea un overlay che scende dall'alto
       final overlay = OverlayEntry(
         builder: (context) => Positioned(
           top: MediaQuery.of(context).padding.top + 10,
@@ -427,10 +417,59 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
         ),
       );
 
-      // Inserisce l'overlay
       Overlay.of(context).insert(overlay);
 
-      // Rimuove l'overlay dopo 3 secondi
+      Future.delayed(const Duration(seconds: 3), () {
+        overlay.remove();
+      });
+    });
+  }
+
+  void _showOKSnackbar(String message) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final overlay = OverlayEntry(
+        builder: (context) => Positioned(
+          top: MediaQuery.of(context).padding.top + 10,
+          left: 0,
+          right: 0,
+          child: Material(
+            color: Colors.transparent,
+            child: Center(
+              child: Container(
+                width: 300,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.check_circle_outline,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: Text(
+                        message,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      Overlay.of(context).insert(overlay);
+
       Future.delayed(const Duration(seconds: 3), () {
         overlay.remove();
       });
@@ -485,7 +524,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Seleziona un evento',
+                      AppLocalizations.of(context).select_event,
                       style: Theme.of(dialogContext)
                           .textTheme
                           .titleLarge
@@ -497,8 +536,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                       icon: const Icon(Icons.close),
                       onPressed: () {
                         Navigator.of(dialogContext).pop();
-                        completer.complete(
-                            "-1"); // Complete with error code if closed
+                        completer.complete("-1");
                       },
                     ),
                   ],
@@ -524,20 +562,20 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(12),
                                     onTap: () async {
-                                      Navigator.of(dialogContext)
-                                          .pop(); // Close events dialog first
+                                      Navigator.of(dialogContext).pop();
 
-                                      showLoadingDialog("Loading");
+                                      showLoadingDialog(
+                                          AppLocalizations.of(context).loading);
                                       final result = await uploadImageForEvent(
                                           events[i], eventName);
 
                                       if (_dialogContext.mounted) {
-                                        Navigator.of(_dialogContext)
-                                            .pop(); // Dismiss loading dialog
+                                        Navigator.of(_dialogContext).pop();
 
                                         if (result == "-1") {
                                           _showErrorSnackbar(
-                                              "Foto non caricata sei troppo lontano dall'evento");
+                                              AppLocalizations.of(context)
+                                                  .too_far_from_event);
                                         } else {
                                           _showUploadSuccess(
                                               _dialogContext, true);
@@ -587,7 +625,10 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                                                     ),
                                                     const SizedBox(height: 4),
                                                     Text(
-                                                      'Codice: ${events[i]}',
+                                                      AppLocalizations.of(
+                                                              context)
+                                                          .code_label(
+                                                              events[i]),
                                                       style: Theme.of(context)
                                                           .textTheme
                                                           .bodyMedium
@@ -662,10 +703,8 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
   void _showUploadSuccess(BuildContext context, bool withEvent) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (context.mounted) {
-        // Chiude qualsiasi SnackBar correntemente visualizzato
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
-        // Crea un overlay che scende dall'alto
         final overlay = OverlayEntry(
           builder: (context) => Positioned(
             top: MediaQuery.of(context).padding.top + 10,
@@ -693,8 +732,10 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                       Flexible(
                         child: Text(
                           withEvent
-                              ? 'Foto caricata nell\'evento con successo!'
-                              : 'Foto caricata con successo',
+                              ? AppLocalizations.of(context)
+                                  .photo_uploaded_event_success
+                              : AppLocalizations.of(context)
+                                  .photo_uploaded_success,
                           style: const TextStyle(
                               color: Colors.white,
                               fontSize: 14,
@@ -709,10 +750,8 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
           ),
         );
 
-        // Inserisce l'overlay
         Overlay.of(context).insert(overlay);
 
-        // Rimuove l'overlay dopo 3 secondi
         Future.delayed(const Duration(seconds: 3), () {
           overlay.remove();
         });
@@ -746,18 +785,18 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Carica foto',
-                      style: TextStyle(
+                    Text(
+                      AppLocalizations.of(context).upload_photo,
+                      style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w600,
                         letterSpacing: -0.5,
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Text(
-                      'Sei iscritto a degli eventi. Vuoi caricare la foto in uno di essi?',
-                      style: TextStyle(
+                    Text(
+                      AppLocalizations.of(context).event_enrollment_prompt,
+                      style: const TextStyle(
                         fontSize: 16,
                         height: 1.5,
                         color: Colors.black87,
@@ -776,16 +815,15 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                     ),
                     const SizedBox(height: 24),
                     _buildButton(
-                      "Scegli evento",
+                      AppLocalizations.of(context).choose_event,
                       color: Colors.green,
                       onPressed: () async {
                         Navigator.of(dialogContext).pop();
 
-                        showLoadingDialog("Loading");
+                        showLoadingDialog(AppLocalizations.of(context).loading);
                         final eventId = await showEventsDialog(events);
                         if (_dialogContext.mounted) {
-                          Navigator.of(_dialogContext)
-                              .pop(); // Dismiss loading dialog
+                          Navigator.of(_dialogContext).pop();
                         }
 
                         completer.complete(eventId);
@@ -793,13 +831,13 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                     ),
                     const SizedBox(height: 8),
                     _buildButton(
-                      "Carica senza evento",
+                      AppLocalizations.of(context).upload_without_event,
                       color: Colors.grey,
                       outlined: true,
                       onPressed: () async {
                         Navigator.of(dialogContext).pop();
 
-                        showLoadingDialog("Loading");
+                        showLoadingDialog(AppLocalizations.of(context).loading);
                         final uploadId = await uploadImage(image);
                         if (_dialogContext.mounted) {
                           Navigator.of(_dialogContext).pop();
@@ -822,7 +860,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
   }
 
   Future<String> _uploadImageWithoutEvent(File image) async {
-    showLoadingDialog("Caricamento foto...");
+    showLoadingDialog(AppLocalizations.of(context).uploading_photo);
     id = await uploadImage(image);
     Navigator.of(_dialogContext).pop();
     if (context.mounted) {
@@ -855,11 +893,13 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
       var response = await request.send();
 
       if (response.statusCode == 200) {
-        _showTopSnackBar(context, 'Dettagli caricati con successo',
+        _showTopSnackBar(
+            context, AppLocalizations.of(context).details_uploaded_success,
             isSuccess: true);
       } else {
         _checkTokenValidity(response.statusCode);
-        _showTopSnackBar(context, 'Errore nei Dettagli', isSuccess: false);
+        _showTopSnackBar(context, AppLocalizations.of(context).details_error,
+            isSuccess: false);
         _showOutfitDetailsSheet(id);
       }
     } catch (e) {
@@ -935,29 +975,27 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
       Map<String, Map<String, String>> itemsDetails, String id) async {
     String item = "";
     try {
-      // Carica ogni item
       for (var entry in itemsDetails.entries) {
         item = entry.key;
         await uploadDetails(
           id,
-          entry.value['store'] ?? '', // brand
-          entry.key, // type
+          entry.value['store'] ?? '',
+          entry.key,
           entry.value['feedback'] ?? '',
           entry.value['model'] ?? '',
         );
       }
 
-      // Mostra un messaggio di successo
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Tutti i capi sono stati caricati con successo')),
-      );
-    } catch (e) {
-      // Mostra l'errore
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content:
-                Text('Errore durante il caricamento dei dettagli per $item')),
+                Text(AppLocalizations.of(context).all_items_uploaded_success)),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content:
+                Text(AppLocalizations.of(context).item_upload_error(item))),
       );
     }
   }
@@ -981,11 +1019,10 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                   _buildOptionButton(
                     context: context,
                     icon: Icons.photo_library_outlined,
-                    label: 'Galleria',
+                    label: AppLocalizations.of(context).gallery,
                     onTap: () async {
                       Navigator.pop(context);
                       id = await _processGalleryImage();
-                      print(id);
                       if (id != "-1") {
                         _showOutfitDetailsSheet(id);
                         id = "-1";
@@ -995,7 +1032,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                   _buildOptionButton(
                     context: context,
                     icon: Icons.camera_alt_outlined,
-                    label: 'Fotocamera',
+                    label: AppLocalizations.of(context).camera,
                     onTap: () async {
                       Navigator.pop(context);
                       id = await _processCameraImage();
@@ -1024,12 +1061,12 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
 
     Map<String, Map<String, String>> itemsDetails = {};
     final List<Map<String, dynamic>> clothingTypes = [
-      {'id': 'shirt', 'icon': FontAwesomeIcons.shirt, 'label': 'Maglietta'},
-      {'id': 'pants', 'icon': Icons.checkroom, 'label': 'Pantaloni'},
-      {'id': 'dress', 'icon': FontAwesomeIcons.person, 'label': 'Vestito'},
-      {'id': 'shoes', 'icon': FontAwesomeIcons.shoePrints, 'label': 'Scarpe'},
-      {'id': 'hat', 'icon': FontAwesomeIcons.hatCowboy, 'label': 'Cappello'},
-      {'id': 'accessory', 'icon': FontAwesomeIcons.gem, 'label': 'Accessorio'},
+      {'id': 'shirt', 'icon': FontAwesomeIcons.shirt, 'label': 'Shirt'},
+      {'id': 'pants', 'icon': Icons.checkroom, 'label': 'Pants'},
+      {'id': 'dress', 'icon': FontAwesomeIcons.person, 'label': 'Dress'},
+      {'id': 'shoes', 'icon': FontAwesomeIcons.shoePrints, 'label': 'Shoes'},
+      {'id': 'hat', 'icon': FontAwesomeIcons.hatCowboy, 'label': 'Hat'},
+      {'id': 'accessory', 'icon': FontAwesomeIcons.gem, 'label': 'Accessory'},
     ];
 
     showModalBottomSheet(
@@ -1043,11 +1080,11 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
               return Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
                     child: Text(
-                      'Seleziona i capi del tuo outfit',
-                      style: TextStyle(
+                      AppLocalizations.of(context).select_outfit_items,
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
@@ -1149,7 +1186,6 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                     },
                   ),
                   const SizedBox(height: 20),
-                  // Pulsante Salva spostato qui, subito dopo la griglia
                   if (selectedTypes.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1167,7 +1203,9 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                           minimumSize: const Size(double.infinity, 50),
                         ),
                         child: Text(
-                          'Salva outfit (${itemsDetails.length}/${selectedTypes.length} dettagli inseriti)',
+                          AppLocalizations.of(context).save_outfit(
+                              itemsDetails.length.toString(),
+                              selectedTypes.length.toString()),
                         ),
                       ),
                     ),
@@ -1177,9 +1215,9 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Column(
                         children: [
-                          const Text(
-                            'Capi selezionati:',
-                            style: TextStyle(
+                          Text(
+                            AppLocalizations.of(context).selected_items,
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
@@ -1208,8 +1246,8 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                                       horizontal: 12),
                                 ),
                                 child: Text(hasDetails
-                                    ? 'Modifica'
-                                    : 'Aggiungi dettagli'),
+                                    ? AppLocalizations.of(context).edit
+                                    : AppLocalizations.of(context).add_details),
                               ),
                             );
                           }),
@@ -1243,7 +1281,8 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                           Icon(currentType['icon']),
                           const SizedBox(width: 10),
                           Text(
-                            'Dettagli ${currentType['label']}',
+                            AppLocalizations.of(context)
+                                .details_item(currentType['label']),
                             style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -1255,7 +1294,8 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                       TextFormField(
                         controller: storeController,
                         decoration: InputDecoration(
-                          labelText: 'Brand',
+                          labelText:
+                              AppLocalizations.of(context).brand_input_label,
                           prefixIcon: const Icon(Icons.store),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -1263,7 +1303,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                         ),
                         validator: (value) {
                           if (value?.isEmpty ?? true) {
-                            return 'Inserisci il nome del Brand';
+                            return AppLocalizations.of(context).enter_brand;
                           }
                           return null;
                         },
@@ -1272,7 +1312,8 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                       TextFormField(
                         controller: modelController,
                         decoration: InputDecoration(
-                          labelText: 'Modello/Collezione',
+                          labelText:
+                              AppLocalizations.of(context).model_input_label,
                           prefixIcon: const Icon(Icons.label),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -1284,7 +1325,8 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                         controller: feedbackController,
                         maxLength: 60,
                         decoration: InputDecoration(
-                          labelText: 'Feedback',
+                          labelText:
+                              AppLocalizations.of(context).feedback_input_label,
                           prefixIcon: const Icon(Icons.comment),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -1309,7 +1351,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                              child: const Text('Indietro'),
+                              child: Text(AppLocalizations.of(context).back),
                             ),
                           ),
                           const SizedBox(width: 16),
@@ -1334,7 +1376,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                              child: const Text('Salva'),
+                              child: Text(AppLocalizations.of(context).save),
                             ),
                           ),
                         ],
@@ -1421,7 +1463,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
       }
 
       if (mounted) {
-        showLoadingDialog("Apertura fotocamera...");
+        showLoadingDialog(AppLocalizations.of(context).camera_opening);
       }
 
       final picker = ImagePicker();
@@ -1446,7 +1488,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
       }
 
       if (mounted) {
-        _showErrorSnackbar("Si è verificato un errore con la fotocamera");
+        _showErrorSnackbar(AppLocalizations.of(context).camera_error);
       }
 
       return id;
@@ -1458,7 +1500,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
 
     try {
       isDialogOpen = true;
-      showLoadingDialog("Apertura galleria...");
+      showLoadingDialog(AppLocalizations.of(context).gallery_opening);
       final picker = ImagePicker();
       final pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
@@ -1478,7 +1520,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
         Navigator.of(_dialogContext).pop();
         isDialogOpen = false;
       }
-      _showErrorSnackbar("Si è verificato un errore con la galleria");
+      _showErrorSnackbar(AppLocalizations.of(context).gallery_error);
 
       Navigator.pushReplacement(
         context,
@@ -1495,7 +1537,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
         _capturedImage = image;
       });
 
-      showLoadingDialog("Verifica eventi...");
+      showLoadingDialog(AppLocalizations.of(context).event_check);
       final isEnrolledInEvents = await checkUserEvents();
       Navigator.of(_dialogContext).pop();
 
@@ -1508,12 +1550,12 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
       }
     } catch (e) {
       Navigator.of(_dialogContext).pop();
-      _showErrorSnackbar("Si è verificato un errore");
+      _showErrorSnackbar(AppLocalizations.of(context).generic_error);
       return id;
     }
   }
 
-  Future<void> fetchImages() async {
+  Future<bool> fetchImages() async {
     final headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
@@ -1539,15 +1581,17 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
             }
           });
         }
+        return true;
       } else {
         _checkTokenValidity(response.statusCode);
       }
     } catch (error) {
       print('Errore durante la richiesta: $error');
     }
+    return false;
   }
 
-  Future<void> fetchProfileData() async {
+  Future<bool> fetchProfileData() async {
     try {
       final headers = {
         'Content-Type': 'application/json',
@@ -1567,6 +1611,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
             isLoading = false;
           });
         }
+        return true;
       } else {
         _checkTokenValidity(response.statusCode);
         throw Exception('Failed to load profile data');
@@ -1579,6 +1624,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
       }
       print('Error fetching profile data: $error');
     }
+    return false;
   }
 
   Future<bool> _deletePhoto(String photoUrl) async {
@@ -1598,29 +1644,20 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
         setState(() {
           images.remove(photoUrl);
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Foto eliminata con successo'),
-            backgroundColor: Colors.green,
-          ),
-        );
+
+        _showOKSnackbar(AppLocalizations.of(context).photo_deleted_success);
+
         await _initializeData(true);
         return true;
       } else {
         _checkTokenValidity(response.statusCode);
+        _showErrorSnackbar(AppLocalizations.of(context).photo_deletion_error);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Errore: impossibile eliminare la foto'),
-            backgroundColor: Colors.red,
-          ),
-        );
         return false;
       }
     } catch (error) {
-      // Gestione errori di rete
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Errore di connessione')),
+        SnackBar(content: Text(AppLocalizations.of(context).connection_error)),
       );
       return false;
     }
@@ -1665,7 +1702,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
       builder: (BuildContext context) {
         return Dialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16), // Bordo arrotondato
+            borderRadius: BorderRadius.circular(16),
           ),
           insetPadding:
               const EdgeInsets.symmetric(horizontal: 20, vertical: 50),
@@ -1686,22 +1723,19 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Titolo con divider
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(
-                    'Profili',
-                    style: TextStyle(
+                    AppLocalizations.of(context).profiles_title,
+                    style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
                 const Divider(),
-
-                // Lista dei risultati
                 SizedBox(
-                  height: 300, // Altezza fissa per evitare problemi di overflow
+                  height: 300,
                   child: ListView.builder(
                     itemCount: profiles.length,
                     itemBuilder: (context, index) {
@@ -1740,10 +1774,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                     },
                   ),
                 ),
-
                 const Divider(),
-
-                // Pulsante Chiudi
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
@@ -1752,7 +1783,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                       foregroundColor: Colors.blue,
                       textStyle: const TextStyle(fontSize: 16),
                     ),
-                    child: const Text('Chiudi'),
+                    child: Text(AppLocalizations.of(context).close),
                   ),
                 ),
               ],
@@ -1793,7 +1824,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
             controller: _searchController,
             onSubmitted: (query) => searchProfiles(query),
             decoration: InputDecoration(
-              hintText: 'Cerca...',
+              hintText: AppLocalizations.of(context).search_hint,
               hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
               prefixIcon: const Icon(
                 Icons.search,
@@ -1807,7 +1838,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
         ),
         leading: Builder(
           builder: (context) => IconButton(
-            icon: Icon(Icons.menu, color: Color.fromRGBO(0, 0, 0, 1)),
+            icon: const Icon(Icons.menu, color: Color.fromRGBO(0, 0, 0, 1)),
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
@@ -1824,9 +1855,9 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 Text(
-                  'Menu',
+                  AppLocalizations.of(context).menu,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: Color.fromRGBO(0, 0, 0, 1),
+                        color: const Color.fromRGBO(0, 0, 0, 1),
                         fontWeight: FontWeight.bold,
                       ),
                 ),
@@ -1836,16 +1867,16 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
           ),
           ListTile(
             leading: const Icon(Icons.home_outlined),
-            title: const Text('Home'),
+            title: Text(AppLocalizations.of(context).home),
             onTap: () {
-              Navigator.pop(context); // Chiude il drawer
+              Navigator.pop(context);
             },
           ),
           ListTile(
             leading: const Icon(Icons.score_outlined),
-            title: const Text('Scoreboard'),
+            title: Text(AppLocalizations.of(context).scoreboard),
             onTap: () {
-              Navigator.pop(context); // Chiude il drawer
+              Navigator.pop(context);
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const ScoreboardPage()),
@@ -1854,15 +1885,15 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
           ),
           ListTile(
             leading: const Icon(Icons.event_outlined),
-            title: const Text('Event'),
+            title: Text(AppLocalizations.of(context).event),
             onTap: () {
-              Navigator.pop(context); // Chiude il drawer
+              Navigator.pop(context);
               event();
             },
           ),
           ListTile(
             leading: const Icon(Icons.save),
-            title: const Text('Save'),
+            title: Text(AppLocalizations.of(context).save_menu),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
@@ -1876,7 +1907,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
           ),
           ListTile(
             leading: const Icon(Icons.public_outlined),
-            title: const Text('Connect'),
+            title: Text(AppLocalizations.of(context).connect),
             onTap: () {
               Navigator.pop(context);
               if (userEmail != null) {
@@ -1886,14 +1917,16 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                 );
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Email non disponibile')),
+                  SnackBar(
+                      content: Text(
+                          AppLocalizations.of(context).email_not_available)),
                 );
               }
             },
           ),
           ListTile(
             leading: const Icon(Icons.settings),
-            title: const Text('Settings'),
+            title: Text(AppLocalizations.of(context).settings),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
@@ -1918,7 +1951,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                 signOut();
               },
               icon: const Icon(Icons.logout),
-              label: const Text('Logout'),
+              label: Text(AppLocalizations.of(context).logout),
             ),
           ),
         ],
@@ -1958,35 +1991,6 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                                     ],
                                   ),
                                   child: GestureDetector(
-                                    /*onLongPress: () {
-                                      // Mostra un dialogo o un bottom sheet per cambiare la foto
-                                      showModalBottomSheet(
-                                        context: context,
-                                        builder: (context) => Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            ListTile(
-                                              leading: Icon(Icons.photo_camera),
-                                              title: Text('Scatta una foto'),
-                                              onTap: () {
-                                                // Logica per scattare una foto
-                                                Navigator.pop(context);
-                                              },
-                                            ),
-                                            ListTile(
-                                              leading:
-                                                  Icon(Icons.photo_library),
-                                              title:
-                                                  Text('Scegli dalla galleria'),
-                                              onTap: () {
-                                                // Logica per scegliere dalla galleria
-                                                Navigator.pop(context);
-                                              },
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    },*/
                                     child: CircleAvatar(
                                       radius: 40,
                                       backgroundColor:
@@ -2008,53 +2012,14 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  GestureDetector(
-                                    /*onLongPress: () {
-                                      // Show dialog to edit username
-                                      showDialog(
-                                        context: context,
-                                        builder: (BuildContext context) {
-                                          String newUsername =
-                                              userName ?? 'Unknown User';
-                                          return AlertDialog(
-                                            title: Text(
-                                                'Vuoi modificare il tuo username'),
-                                            content: TextField(
-                                              autofocus: true,
-                                              controller: TextEditingController(
-                                                  text: newUsername),
-                                              onChanged: (value) {
-                                                newUsername = value;
-                                              },
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () {
-                                                  Navigator.pop(context);
-                                                },
-                                                child: Text('Cancel'),
-                                              ),
-                                              TextButton(
-                                                onPressed: () {
-                                                  updateUsername(newUsername);
-                                                  Navigator.pop(context);
-                                                },
-                                                child: Text('Save'),
-                                              ),
-                                            ],
-                                          );
-                                        },
-                                      );
-                                    },*/
-                                    child: Text(
-                                      userName ?? 'Unknown User',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleLarge
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                    ),
+                                  Text(
+                                    userName ?? 'Unknown User',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleLarge
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                   ),
                                   Row(
                                     children: [
@@ -2082,7 +2047,8 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                                           children: [
                                             const SizedBox(width: 4),
                                             Text(
-                                              '${point ?? '0'} points',
+                                              AppLocalizations.of(context)
+                                                  .points_label(point ?? '0'),
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .labelLarge
@@ -2124,7 +2090,8 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                                             ),
                                             const SizedBox(width: 4),
                                             Text(
-                                              '$save save',
+                                              AppLocalizations.of(context)
+                                                  .save_label(save.toString()),
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .labelLarge
@@ -2168,14 +2135,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                                       child: GestureDetector(
                                         onTap: () {
                                           _handleImageTap(index);
-                                          /*setState(() {
-                                            enlargedImageIndex = index;
-                                            isImageEnlarged = true;
-                                          });*/
-                                          //_showFullScreenImage(images[index]);
                                         },
-                                        /*onLongPress: () =>
-                                            _handleImageLongPress(index),*/
                                         child: Container(
                                           width: double.infinity,
                                           decoration: BoxDecoration(
@@ -2206,7 +2166,6 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                                         mainAxisAlignment:
                                             MainAxisAlignment.spaceBetween,
                                         children: [
-                                          // Punteggio con stella
                                           Row(
                                             children: [
                                               const Icon(
@@ -2224,10 +2183,8 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                                               ),
                                             ],
                                           ),
-                                          // Pulsanti delete e save
                                           Row(
                                             children: [
-                                              // Pulsante Delete
                                               Material(
                                                 color: Colors.transparent,
                                                 child: InkWell(
@@ -2248,7 +2205,6 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                                                 ),
                                               ),
                                               const SizedBox(width: 4),
-                                              // Pulsante Save
                                               Material(
                                                 color: Colors.transparent,
                                                 child: InkWell(
@@ -2293,7 +2249,8 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                               ),
                               const SizedBox(height: 16),
                               Text(
-                                'Nessuna foto disponibile',
+                                AppLocalizations.of(context)
+                                    .no_photos_available,
                                 style: Theme.of(context)
                                     .textTheme
                                     .titleMedium
@@ -2359,6 +2316,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
   }
 
   Future<void> _handleImageTap(int index) async {
+    if (isImageEnlarged) return;
     try {
       setState(() {
         enlargedImageIndex = index;
@@ -2401,6 +2359,10 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
         )..repeat(reverse: true);
       }
 
+      // Aggiungiamo il TransformationController
+      final TransformationController transformationController =
+          TransformationController();
+
       await showDialog(
         context: context,
         builder: (dialogContext) {
@@ -2436,13 +2398,17 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                   alignment: Alignment.bottomCenter,
                   children: [
                     GestureDetector(
-                      onTap: () => Navigator.pop(
-                          dialogContext), // Chiusura solo con tap sull'immagine
+                      onTap: () => Navigator.pop(dialogContext),
                       child: InteractiveViewer(
+                        transformationController: transformationController,
                         panEnabled: true,
                         boundaryMargin: const EdgeInsets.all(80),
                         minScale: 0.5,
                         maxScale: 4,
+                        onInteractionEnd: (_) {
+                          // Resetta la trasformazione quando l'utente finisce di interagire
+                          transformationController.value = Matrix4.identity();
+                        },
                         child: Container(
                           color: Colors.black.withOpacity(0.9),
                           child: Center(
@@ -2514,11 +2480,12 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                                                     BorderRadius.circular(2),
                                               ),
                                             ),
-                                            const Padding(
-                                              padding: EdgeInsets.all(20),
+                                            Padding(
+                                              padding: const EdgeInsets.all(20),
                                               child: Text(
-                                                'Dettagli Foto',
-                                                style: TextStyle(
+                                                AppLocalizations.of(context)
+                                                    .photo_details,
+                                                style: const TextStyle(
                                                     fontSize: 24,
                                                     fontWeight:
                                                         FontWeight.bold),
@@ -2549,20 +2516,48 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                                                           CrossAxisAlignment
                                                               .start,
                                                       children: [
-                                                        Text(
-                                                            'Tipo: ${photoData!['data'][idx]['type'] ?? 'N/A'}'),
+                                                        Text(AppLocalizations
+                                                                .of(context)
+                                                            .type_label(
+                                                                photoData!['data']
+                                                                            [
+                                                                            idx]
+                                                                        [
+                                                                        'type'] ??
+                                                                    'N/A')),
                                                         const SizedBox(
                                                             height: 8),
-                                                        Text(
-                                                            'Marca: ${photoData!['data'][idx]['brand'] ?? 'N/A'}'),
+                                                        Text(AppLocalizations
+                                                                .of(context)
+                                                            .brand_label(
+                                                                photoData['data']
+                                                                            [
+                                                                            idx]
+                                                                        [
+                                                                        'brand'] ??
+                                                                    'N/A')),
                                                         const SizedBox(
                                                             height: 8),
-                                                        Text(
-                                                            'Modello: ${photoData!['data'][idx]['model'] ?? 'N/A'}'),
+                                                        Text(AppLocalizations
+                                                                .of(context)
+                                                            .model_label(
+                                                                photoData['data']
+                                                                            [
+                                                                            idx]
+                                                                        [
+                                                                        'model'] ??
+                                                                    'N/A')),
                                                         const SizedBox(
                                                             height: 8),
-                                                        Text(
-                                                            'Feedback: ${photoData!['data'][idx]['feedback'] ?? 'N/A'}'),
+                                                        Text(AppLocalizations
+                                                                .of(context)
+                                                            .feedback_label(
+                                                                photoData['data']
+                                                                            [
+                                                                            idx]
+                                                                        [
+                                                                        'feedback'] ??
+                                                                    'N/A')),
                                                       ],
                                                     ),
                                                   ),
@@ -2597,13 +2592,14 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                         child: SlideTransition(
                           position: animation,
                           child: Column(
-                            children: const [
-                              Icon(Icons.keyboard_arrow_up,
+                            children: [
+                              const Icon(Icons.keyboard_arrow_up,
                                   color: Colors.white, size: 36),
-                              SizedBox(height: 4),
+                              const SizedBox(height: 4),
                               Text(
-                                'Scorri verso l\'alto per i dettagli',
-                                style: TextStyle(
+                                AppLocalizations.of(context)
+                                    .swipe_up_for_details,
+                                style: const TextStyle(
                                     color: Colors.white, fontSize: 14),
                               ),
                             ],
@@ -2614,7 +2610,6 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                       const Center(
                           child:
                               CircularProgressIndicator(color: Colors.white)),
-                    // Rimosso il pulsante "X" (IconButton con Icons.close)
                   ],
                 );
               },
@@ -2622,15 +2617,12 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
           );
         },
       );
+
+      // Pulizia del controller dopo la chiusura del dialog
+      transformationController.dispose();
+      animationController?.dispose();
     } catch (e) {
-      print('Error in _handleImageTap: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Errore durante l\'operazione'),
-              backgroundColor: Colors.red),
-        );
-      }
+      _showErrorSnackbar(AppLocalizations.of(context).operation_error);
     } finally {
       if (mounted) {
         setState(() {
@@ -2656,14 +2648,14 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
     if (response.statusCode == 200) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Nome modificato con successo'),
+          content: Text(AppLocalizations.of(context).username_updated_success),
           backgroundColor: Colors.green,
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Nome non modificato'),
+          content: Text(AppLocalizations.of(context).username_update_failed),
           backgroundColor: Colors.red,
         ),
       );
@@ -2680,33 +2672,29 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
           backgroundColor: colorScheme.surface,
           surfaceTintColor: Colors.transparent,
           title: Text(
-            'Conferma eliminazione',
+            AppLocalizations.of(context).confirm_deletion,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           content: Text(
-            'Sei sicuro di voler eliminare questa foto?',
+            AppLocalizations.of(context).delete_confirmation,
             style: Theme.of(context).textTheme.bodyLarge,
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
-                'Annulla',
+                AppLocalizations.of(context).cancel,
                 style: TextStyle(color: colorScheme.primary),
               ),
             ),
             FilledButton(
               onPressed: () async {
                 Navigator.of(context).pop();
-                showLoadingDialog("Photo Deletion");
+                showLoadingDialog(AppLocalizations.of(context).photo_deletion);
                 if (await _deletePhoto(images[index])) {
                   Navigator.of(_dialogContext).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Foto eliminata con successo'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
+                  _showOKSnackbar(
+                      AppLocalizations.of(context).photo_deleted_success);
                 }
                 Navigator.of(_dialogContext).pop();
               },
@@ -2714,7 +2702,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                 backgroundColor: colorScheme.errorContainer,
                 foregroundColor: colorScheme.onErrorContainer,
               ),
-              child: const Text('Elimina'),
+              child: Text(AppLocalizations.of(context).delete),
             ),
           ],
         );
@@ -2734,41 +2722,25 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
         },
       );
 
-      // Controlla lo status code
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        // Decodifica la risposta per mostrare un messaggio più specifico
-        final Map<String, dynamic> data = jsonDecode(response.body);
+      if (mounted) {
+        setState(() {});
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(data['message'] ?? 'Foto salvata con successo'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else {
-        // Controlla se è un problema di token
-        _checkTokenValidity(response.statusCode);
-
-        // Mostra errore specifico se disponibile nella risposta
-        try {
-          final Map<String, dynamic> errorData = jsonDecode(response.body);
-          throw Exception(
-              errorData['message'] ?? 'Errore durante il salvataggio');
-        } catch (e) {
-          throw Exception(
-              'Errore durante il salvataggio: ${response.statusCode}');
+        if (response.statusCode == 201 || response.statusCode == 200) {
+          _showOKSnackbar(AppLocalizations.of(context).photo_saved_success);
+        } else {
+          _checkTokenValidity(response.statusCode);
+          if (response.statusCode == 403) {
+            _showErrorSnackbar(AppLocalizations.of(context).already_save);
+          } else {
+            _showErrorSnackbar(AppLocalizations.of(context).save_photo_error);
+          }
         }
       }
     } catch (e) {
-      // Registra l'errore e mostra un messaggio all'utente
-      print("Errore durante la chiamata API: $e");
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Impossibile salvare la foto. Riprova più tardi.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        setState(() {});
+        _showErrorSnackbar(AppLocalizations.of(context).save_photo_error);
+      }
 
       throw Exception("Impossibile connettersi all'API.");
     }

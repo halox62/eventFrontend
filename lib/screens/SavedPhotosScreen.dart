@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:social_flutter_giorgio/auth.dart';
 import 'package:social_flutter_giorgio/screens/AuthPage.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class SavedPhotosScreen extends StatefulWidget {
   const SavedPhotosScreen({Key? key}) : super(key: key);
@@ -44,16 +45,16 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen>
       if (token != null) {
         await _loadSavedPhotos();
       } else {
-        const SnackBar(
-          content: Text('Errore durante l\'aggiornamento'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).error),
           behavior: SnackBarBehavior.floating,
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Errore durante l\'aggiornamento'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context).error),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -103,13 +104,7 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen>
         _isLoading = false;
         _errorMessage = e.toString();
       });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Impossibile caricare le foto: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showErrorSnackbar(AppLocalizations.of(context).error);
     }
   }
 
@@ -200,7 +195,7 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen>
               ),
               const SizedBox(height: 24),
               Text(
-                'Si è verificato un errore',
+                AppLocalizations.of(context).error,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -215,7 +210,7 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen>
               ElevatedButton.icon(
                 onPressed: _loadSavedPhotos,
                 icon: const Icon(Icons.refresh),
-                label: const Text('Riprova'),
+                label: Text(AppLocalizations.of(context).try_again),
                 style: ElevatedButton.styleFrom(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
@@ -258,14 +253,14 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen>
               ),
               const SizedBox(height: 24),
               Text(
-                'Nessuna foto salvata',
+                AppLocalizations.of(context).no_photos_saved,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
               ),
               const SizedBox(height: 12),
               Text(
-                'Le foto che salverai appariranno qui',
+                AppLocalizations.of(context).photos_saved,
                 style: TextStyle(color: Colors.grey[600]),
                 textAlign: TextAlign.center,
               ),
@@ -353,30 +348,24 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Titolo o info della foto, se disponibile
-                      Expanded(
-                        child: Text(
-                          photo['title'] ?? 'Foto',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w500,
-                            color: Colors.black87,
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.star,
+                            color: Colors.amber,
+                            size: 16,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const Icon(
-                        Icons.star,
-                        color: Colors.amber,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        photo['point']?.toString() ?? "0",
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.bold,
-                        ),
+                          const SizedBox(width: 2),
+                          Text(
+                            photo['point']?.toString() ?? "0",
+                            style: const TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
 
                       const SizedBox(width: 8),
@@ -388,12 +377,12 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen>
                         child: Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.1),
+                            //color: Colors.red.withOpacity(0.1),
+                            color: Colors.transparent,
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
                             Icons.delete_outline,
-                            color: Colors.red,
                             size: 20,
                           ),
                         ),
@@ -473,7 +462,7 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen>
                         Icon(Icons.error, color: Colors.white, size: 50),
                         SizedBox(height: 16),
                         Text(
-                          'Impossibile caricare l\'immagine',
+                          AppLocalizations.of(context).load_image_error,
                           style: TextStyle(color: Colors.white),
                         ),
                       ],
@@ -498,30 +487,31 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen>
           backgroundColor: colorScheme.surface,
           surfaceTintColor: Colors.transparent,
           title: Text(
-            'Conferma eliminazione',
+            AppLocalizations.of(context).conferm_delete,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           content: Text(
-            'Sei sicuro di voler eliminare questa foto?',
+            AppLocalizations.of(context).delete_confirmation,
             style: Theme.of(context).textTheme.bodyLarge,
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
-                'Annulla',
+                AppLocalizations.of(context).cancel,
                 style: TextStyle(color: colorScheme.primary),
               ),
             ),
             FilledButton(
               onPressed: () async {
                 Navigator.of(context).pop();
-                showLoadingDialog("Photo Deletion");
+                showLoadingDialog(AppLocalizations.of(context).photo_deletion);
                 if (await _deletePhoto(id)) {
                   Navigator.of(_dialogContext).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: const Text('Foto eliminata con successo'),
+                      content: Text(
+                          AppLocalizations.of(context).photo_deleted_success),
                       backgroundColor: colorScheme.primaryContainer,
                       behavior: SnackBarBehavior.floating,
                     ),
@@ -533,7 +523,7 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen>
                 backgroundColor: colorScheme.errorContainer,
                 foregroundColor: colorScheme.onErrorContainer,
               ),
-              child: const Text('Elimina'),
+              child: Text(AppLocalizations.of(context).delete),
             ),
           ],
         );
@@ -559,28 +549,21 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen>
           _photos.remove(photoId);
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Foto eliminata con successo'),
-              backgroundColor: Colors.red),
+          SnackBar(
+              content: Text(AppLocalizations.of(context).photo_deleted_success),
+              backgroundColor: Colors.green),
         );
         _loadSavedPhotos();
         return true;
       } else {
         _checkTokenValidity(response.statusCode);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Errore: impossibile eliminare la foto'),
-              backgroundColor: Colors.red),
-        );
+        _showErrorSnackbar(AppLocalizations.of(context).photo_deletion_error);
+
         return false;
       }
     } catch (error) {
-      // Gestione errori di rete
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Errore di connessione'),
-            backgroundColor: Colors.red),
-      );
+      _showErrorSnackbar(AppLocalizations.of(context).connection_error);
+
       return false;
     }
   }
@@ -612,7 +595,7 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen>
   }
 
   Future<void> _handleImageLongPress(int index) async {
-    String message = "";
+    if (isImageEnlarged) return;
     try {
       setState(() {
         enlargedImageIndex = index;
@@ -634,8 +617,6 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen>
             'Authorization': 'Bearer $token',
           },
         );
-        final responseJson = jsonDecode(response.body);
-        message = responseJson["message"] ?? "Errore sconosciuto";
 
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
@@ -651,6 +632,10 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen>
       } finally {
         isLoading = false;
       }
+
+      // Aggiungiamo il TransformationController
+      final TransformationController transformationController =
+          TransformationController();
 
       // Mostra il dialog comunque, anche se non ci sono dettagli
       animationController = AnimationController(
@@ -696,10 +681,15 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen>
                 GestureDetector(
                   onTap: () => Navigator.pop(dialogContext),
                   child: InteractiveViewer(
+                    transformationController: transformationController,
                     panEnabled: true,
                     boundaryMargin: const EdgeInsets.all(80),
                     minScale: 0.5,
                     maxScale: 4,
+                    onInteractionEnd: (_) {
+                      // Resetta la trasformazione quando l'utente finisce di interagire
+                      transformationController.value = Matrix4.identity();
+                    },
                     child: Container(
                       color: Colors.black.withOpacity(0.9),
                       child: Center(
@@ -713,10 +703,11 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen>
                                     child: CircularProgressIndicator());
                           },
                           errorBuilder: (context, error, stackTrace) {
-                            return const Center(
+                            return Center(
                               child: Text(
-                                'Immagine non disponibile',
-                                style: TextStyle(color: Colors.white),
+                                AppLocalizations.of(context)
+                                    .image_not_available,
+                                style: const TextStyle(color: Colors.white),
                               ),
                             );
                           },
@@ -729,12 +720,9 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen>
                   GestureDetector(
                     onVerticalDragUpdate: (details) {
                       totalDragDistance += details.primaryDelta!;
-                      print('Total drag distance: $totalDragDistance');
                     },
                     onVerticalDragEnd: (details) async {
-                      print('Drag end velocity: ${details.primaryVelocity}');
                       if (totalDragDistance < -50 && photoData != null) {
-                        print('Swipe up detected!');
                         isDetailsLoading = true;
                         await showModalBottomSheet(
                           context: dialogContext,
@@ -776,11 +764,12 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen>
                                               BorderRadius.circular(2),
                                         ),
                                       ),
-                                      const Padding(
-                                        padding: EdgeInsets.all(20),
+                                      Padding(
+                                        padding: const EdgeInsets.all(20),
                                         child: Text(
-                                          'Dettagli Foto',
-                                          style: TextStyle(
+                                          AppLocalizations.of(context)
+                                              .photo_details,
+                                          style: const TextStyle(
                                               fontSize: 24,
                                               fontWeight: FontWeight.bold),
                                         ),
@@ -809,16 +798,37 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen>
                                                       CrossAxisAlignment.start,
                                                   children: [
                                                     Text(
-                                                        'Tipo: ${item['type'] ?? 'N/A'}'),
+                                                      AppLocalizations.of(
+                                                              context)
+                                                          .type_label(
+                                                        item['type'] ?? 'N/A',
+                                                      ),
+                                                    ),
                                                     const SizedBox(height: 8),
                                                     Text(
-                                                        'Marca: ${item['brand'] ?? 'N/A'}'),
+                                                      AppLocalizations.of(
+                                                              context)
+                                                          .brand_label(
+                                                        item['brand'] ?? 'N/A',
+                                                      ),
+                                                    ),
                                                     const SizedBox(height: 8),
                                                     Text(
-                                                        'Modello: ${item['model'] ?? 'N/A'}'),
+                                                      AppLocalizations.of(
+                                                              context)
+                                                          .model_label(
+                                                        item['model'] ?? 'N/A',
+                                                      ),
+                                                    ),
                                                     const SizedBox(height: 8),
                                                     Text(
-                                                        'Feedback: ${item['feedback'] ?? 'N/A'}'),
+                                                      AppLocalizations.of(
+                                                              context)
+                                                          .feedback_label(
+                                                        item['feedback'] ??
+                                                            'N/A',
+                                                      ),
+                                                    ),
                                                   ],
                                                 ),
                                               ),
@@ -852,13 +862,14 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen>
                     child: SlideTransition(
                       position: animation,
                       child: Column(
-                        children: const [
-                          Icon(Icons.keyboard_arrow_up,
+                        children: [
+                          const Icon(Icons.keyboard_arrow_up,
                               color: Colors.white, size: 36),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           Text(
-                            'Scorri verso l\'alto per i dettagli',
-                            style: TextStyle(color: Colors.white, fontSize: 14),
+                            AppLocalizations.of(context).swipe_up_for_details,
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 14),
                           ),
                         ],
                       ),
@@ -874,26 +885,12 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen>
         },
       );
 
-      // Mostra SnackBar solo se non ci sono dettagli
-      if (!hasDetails && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                message.isEmpty ? 'Nessun dettaglio disponibile' : message),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      // Pulizia dei controller dopo la chiusura del dialog
+      transformationController.dispose();
+      animationController.dispose();
     } catch (e) {
-      print('Error in _handleImageLongPress: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                message.isEmpty ? 'Errore durante l\'operazione' : message),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showErrorSnackbar(AppLocalizations.of(context).error);
       }
     } finally {
       if (mounted) {
@@ -903,6 +900,57 @@ class _SavedPhotosScreenState extends State<SavedPhotosScreen>
         });
       }
     }
+  }
+
+  void _showErrorSnackbar(String message) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final overlay = OverlayEntry(
+        builder: (context) => Positioned(
+          top: MediaQuery.of(context).padding.top + 10,
+          left: 0,
+          right: 0,
+          child: Material(
+            color: Colors.transparent,
+            child: Center(
+              child: Container(
+                width: 300,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: Text(
+                        message,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      Overlay.of(context).insert(overlay);
+
+      Future.delayed(const Duration(seconds: 3), () {
+        overlay.remove();
+      });
+    });
   }
 
   Widget _buildInfoRow(String label, String value) {

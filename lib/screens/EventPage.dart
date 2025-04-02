@@ -10,6 +10,7 @@ import 'package:social_flutter_giorgio/auth.dart';
 import 'package:social_flutter_giorgio/screens/AuthPage.dart';
 import 'package:social_flutter_giorgio/screens/HomePage.dart';
 import 'package:social_flutter_giorgio/screens/profile.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class EventPageControl extends StatefulWidget {
   final String eventCode;
@@ -32,9 +33,6 @@ class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
   double? eventLongitude;
   int? enlargedImageIndex;
   bool isImageEnlarged = false;
-  //String host = "127.0.0.1:5000";
-  //String host = "10.0.2.2:5000";
-  //String host = "event-production.up.railway.app";
   final String host = "www.event-fit.it";
   String? eventName;
   String? token;
@@ -90,7 +88,7 @@ class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
         _showEventCountdown();
       } else {
         if (loading) {
-          showLoadingDialog("Caricamento Eventi");
+          showLoadingDialog(AppLocalizations.of(context).loading_events);
         }
 
         await _loadEventPhotos();
@@ -100,8 +98,8 @@ class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Nessuna informazione disponibile'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context).no_info_available),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -175,9 +173,9 @@ class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text(
-                      "L'evento non è ancora iniziato",
-                      style: TextStyle(
+                    Text(
+                      AppLocalizations.of(context).event_not_started,
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: Colors.black87,
@@ -185,7 +183,8 @@ class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      "Inizio evento previsto: $formattedEndTime",
+                      AppLocalizations.of(context)
+                          .event_start_time(formattedEndTime),
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.black87.withOpacity(0.7),
@@ -197,17 +196,17 @@ class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
                       children: [
                         _CountdownUnit(
                           value: difference.inHours,
-                          unit: "Ore",
+                          unit: AppLocalizations.of(context).hours,
                         ),
                         _CountdownSeparator(),
                         _CountdownUnit(
                           value: difference.inMinutes % 60,
-                          unit: "Minuti",
+                          unit: AppLocalizations.of(context).minutes,
                         ),
                         _CountdownSeparator(),
                         _CountdownUnit(
                           value: difference.inSeconds % 60,
-                          unit: "Secondi",
+                          unit: AppLocalizations.of(context).seconds,
                         ),
                       ],
                     ),
@@ -234,9 +233,9 @@ class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text(
-                        "Torna alla Home",
-                        style: TextStyle(
+                      child: Text(
+                        AppLocalizations.of(context).return_to_home,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
                         ),
@@ -260,8 +259,8 @@ class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Errore durante l\'aggiornamento'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context).refresh_error),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -338,7 +337,7 @@ class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
         throw Exception('Failed to load event coordinates');
       }
     } catch (e) {
-      print("Errore nel recuperare le coordinate dell'evento: $e");
+      print("Error retrieving event coordinates: $e");
     }
   }
 
@@ -370,33 +369,9 @@ class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
         throw Exception('Failed to load event coordinates');
       }
     } catch (e) {
-      print("Errore nel recuperare le coordinate dell'evento: $e");
+      print("Error retrieving event coordinates: $e");
     }
   }
-
-  /*Future<String> setPositionTrue(String eventCode) async {
-    final url = Uri.parse('https://$host/set_position_true');
-    final headers = {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
-    };
-    final body = jsonEncode({
-      'eventCode': eventCode,
-    });
-
-    final response = await http.post(
-      url,
-      headers: headers,
-      body: body,
-    );
-
-    if (response.statusCode == 200) {
-      return 'Posizione ok';
-    } else {
-      _checkTokenValidity(response.statusCode);
-      return 'Errore nella verifica della posizionecl';
-    }
-  }*/
 
   void showCustomSnackbar(BuildContext context, String message,
       {bool isError = false}) {
@@ -428,7 +403,7 @@ class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
         ),
         dismissDirection: DismissDirection.horizontal,
         action: SnackBarAction(
-          label: 'Dismiss',
+          label: AppLocalizations.of(context).dismiss,
           textColor: Colors.white70,
           onPressed: () {
             ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -447,12 +422,9 @@ class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
       PermissionStatus permission = await Permission.location.request();
 
       if (permission.isGranted) {
-        // Il permesso è stato concesso
-        // Ottieni la posizione corrente del dispositivo
         Position currentPosition = await Geolocator.getCurrentPosition(
             desiredAccuracy: LocationAccuracy.high);
 
-        // Calcola la distanza tra la posizione corrente e quella dell'evento
         double distance = Geolocator.distanceBetween(
           currentPosition.latitude,
           currentPosition.longitude,
@@ -460,27 +432,23 @@ class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
           eventLongitude!,
         );
 
-        // Controlla se la distanza è entro 1 km
         if (distance <= 1000) {
-          //message = await setPositionTrue(widget.eventCode);
-          message = "Posizione ok";
+          message = AppLocalizations.of(context).position_ok;
           showCustomSnackbar(context, message);
         } else {
-          message = 'Sei troppo lontano dall\'evento';
+          message = AppLocalizations.of(context).too_far_from_event;
           showCustomSnackbar(context, message, isError: true);
         }
       } else if (permission.isDenied) {
-        // Il permesso è stato negato
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const Homepage()),
         );
       } else if (permission.isPermanentlyDenied) {
-        // Il permesso è stato negato in modo permanente, apri le impostazioni dell'app
         openAppSettings();
       }
     } catch (e) {
-      print("Errore nel recuperare la posizione: $e");
+      print("Error retrieving location: $e");
     }
   }
 
@@ -610,15 +578,14 @@ class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
         eventPhotos[index]['likes'] = (eventPhotos[index]['likes'] ?? 0) + 1;
         likedPhotos[index] = true;
       });
-      print('Mi piace aggiunto con successo');
+      print('Like added successfully');
     } else {
       var errorData = jsonDecode(response.body);
       _checkTokenValidity(errorData['msg']);
-      print('Errore nell\'aggiungere il mi piace');
+      print('Error adding like');
     }
   }
 
-  // Componente riutilizzabile per l'avatar del profilo
   Widget _buildProfileAvatar(int index) {
     final profileImage = profileImages[index];
     final username = usernamePhotos[index] ?? 'U';
@@ -704,7 +671,7 @@ class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
         backgroundColor: Colors.white,
         centerTitle: true,
         title: Text(
-          'Evento ${eventName ?? ''}',
+          AppLocalizations.of(context).event_title(eventName ?? ''),
           style: const TextStyle(
             color: Colors.black87,
             fontSize: 20,
@@ -732,35 +699,36 @@ class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Row(
+                        Row(
                           children: [
                             Text(
-                              'Classifica',
-                              style: TextStyle(
+                              AppLocalizations.of(context).ranking,
+                              style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            Spacer(),
-                            Icon(Icons.emoji_events, color: Colors.amber),
+                            const Spacer(),
+                            const Icon(Icons.emoji_events, color: Colors.amber),
                           ],
                         ),
                         const SizedBox(height: 16),
                         Expanded(
                           child: rankedPhotos.isEmpty
-                              ? const Center(
+                              ? Center(
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Icon(
+                                      const Icon(
                                         Icons.photo_library_outlined,
                                         size: 48,
                                         color: Colors.grey,
                                       ),
-                                      SizedBox(height: 16),
+                                      const SizedBox(height: 16),
                                       Text(
-                                        'Nessuna foto in classifica',
-                                        style: TextStyle(
+                                        AppLocalizations.of(context)
+                                            .no_photos_in_ranking,
+                                        style: const TextStyle(
                                           color: Colors.grey,
                                           fontSize: 16,
                                         ),
@@ -856,17 +824,17 @@ class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
         strokeWidth: 2,
         child: eventPhotos.isEmpty
             ? ListView(
-                children: const [
+                children: [
                   SizedBox(
                     height: 300,
                     child: Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          SizedBox(height: 16),
+                          const SizedBox(height: 16),
                           Text(
-                            'Nessuna Foto',
-                            style: TextStyle(
+                            AppLocalizations.of(context).no_photos,
+                            style: const TextStyle(
                               color: Colors.black54,
                               fontSize: 16,
                             ),
@@ -965,11 +933,13 @@ class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
                                     return Container(
                                       height: 200,
                                       color: Colors.grey[100],
-                                      child: const Center(
-                                        child: Icon(
-                                          Icons.error_outline,
-                                          color: Colors.grey,
-                                          size: 32,
+                                      child: Center(
+                                        child: Text(
+                                          AppLocalizations.of(context)
+                                              .image_not_available,
+                                          style: const TextStyle(
+                                            color: Colors.grey,
+                                          ),
                                         ),
                                       ),
                                     );
@@ -1012,7 +982,9 @@ class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    '${eventPhotos[index]['likes'] ?? 0} likes',
+                                    AppLocalizations.of(context).likes(
+                                        (eventPhotos[index]['likes'] ?? 0)
+                                            .toString()),
                                     style: const TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w500,
@@ -1023,7 +995,6 @@ class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  // Pulsante Preferito
                                   Material(
                                     color: Colors.transparent,
                                     child: InkWell(
@@ -1056,7 +1027,6 @@ class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
                                     ),
                                   ),
                                   const SizedBox(width: 10),
-
                                   Material(
                                     color: Colors.transparent,
                                     child: InkWell(
@@ -1092,6 +1062,7 @@ class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
   }
 
   Future<void> _handleImageLongPress(int index) async {
+    if (isImageEnlarged) return;
     try {
       setState(() {
         enlargedImageIndex = index;
@@ -1104,7 +1075,6 @@ class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
       Map<String, dynamic>? photoData;
       AnimationController? animationController;
 
-      // Fetch dei dettagli
       try {
         final response = await http.get(
           Uri.parse('https://$host/infoPhoto?id_photo=$id'),
@@ -1129,249 +1099,250 @@ class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
         isLoading = false;
       }
 
-      if (hasDetails) {
-        animationController = AnimationController(
-          duration: const Duration(seconds: 1),
-          vsync: this,
-        )..repeat(reverse: true);
+      animationController = AnimationController(
+        duration: const Duration(seconds: 1),
+        vsync: this,
+      )..repeat(reverse: true);
 
-        await showDialog(
-          context: context,
-          builder: (dialogContext) {
-            bool showSwipeIndicator = hasDetails;
-            bool isDetailsLoading = false;
-            double totalDragDistance = 0.0;
+      // Aggiungiamo il TransformationController
+      final TransformationController transformationController =
+          TransformationController();
 
-            if (hasDetails) {
-              Future.delayed(const Duration(seconds: 5), () {
-                if (dialogContext.mounted) {
-                  showSwipeIndicator = false;
-                  (dialogContext as Element).markNeedsBuild();
-                }
-              });
-            }
+      await showDialog(
+        context: context,
+        builder: (dialogContext) {
+          bool showSwipeIndicator = hasDetails;
+          bool isDetailsLoading = false;
+          double totalDragDistance = 0.0;
 
-            final animation = hasDetails && animationController != null
-                ? Tween<Offset>(
-                    begin: Offset.zero,
-                    end: const Offset(0, -0.5),
-                  ).animate(CurvedAnimation(
-                    parent: animationController,
-                    curve: Curves.easeInOut,
-                  ))
-                : null;
+          if (hasDetails) {
+            Future.delayed(const Duration(seconds: 5), () {
+              if (dialogContext.mounted) {
+                showSwipeIndicator = false;
+                (dialogContext as Element).markNeedsBuild();
+              }
+            });
+          }
 
-            // Controllo per evitare null
-            final imageUrl = eventPhotos[index]["image_path"]?.toString() ??
-                'https://via.placeholder.com/150';
+          final animation = hasDetails && animationController != null
+              ? Tween<Offset>(
+                  begin: Offset.zero,
+                  end: const Offset(0, -0.5),
+                ).animate(CurvedAnimation(
+                  parent: animationController,
+                  curve: Curves.easeInOut,
+                ))
+              : null;
 
-            return Dialog(
-              backgroundColor: Colors.transparent,
-              insetPadding: EdgeInsets.zero,
-              child: Stack(
-                alignment: Alignment.bottomCenter,
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(dialogContext),
-                    child: InteractiveViewer(
-                      panEnabled: true,
-                      boundaryMargin: const EdgeInsets.all(80),
-                      minScale: 0.5,
-                      maxScale: 4,
-                      child: Container(
-                        color: Colors.black.withOpacity(0.9),
-                        child: Center(
-                          child: Image.network(
-                            imageUrl, // Usa l'URL controllato
-                            fit: BoxFit.contain,
-                            loadingBuilder: (context, child, loadingProgress) {
-                              return loadingProgress == null
-                                  ? child
-                                  : const Center(
-                                      child: CircularProgressIndicator());
-                            },
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Center(
-                                child: Text(
-                                  'Immagine non disponibile',
-                                  style: TextStyle(color: Colors.white),
-                                ),
-                              );
-                            },
-                          ),
+          final imageUrl = eventPhotos[index]["image_path"]?.toString() ??
+              'https://via.placeholder.com/150';
+
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: EdgeInsets.zero,
+            child: Stack(
+              alignment: Alignment.bottomCenter,
+              children: [
+                GestureDetector(
+                  onTap: () => Navigator.pop(dialogContext),
+                  child: InteractiveViewer(
+                    transformationController: transformationController,
+                    panEnabled: true,
+                    boundaryMargin: const EdgeInsets.all(80),
+                    minScale: 0.5,
+                    maxScale: 4,
+                    onInteractionEnd: (_) {
+                      // Resetta la trasformazione quando l'utente finisce di interagire
+                      transformationController.value = Matrix4.identity();
+                    },
+                    child: Container(
+                      color: Colors.black.withOpacity(0.9),
+                      child: Center(
+                        child: Image.network(
+                          imageUrl,
+                          fit: BoxFit.contain,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            return loadingProgress == null
+                                ? child
+                                : const Center(
+                                    child: CircularProgressIndicator());
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return Center(
+                              child: Text(
+                                AppLocalizations.of(context)
+                                    .image_not_available,
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ),
                   ),
-                  if (hasDetails)
-                    GestureDetector(
-                      onVerticalDragUpdate: (details) {
-                        totalDragDistance += details.primaryDelta!;
-                      },
-                      onVerticalDragEnd: (details) async {
-                        if (totalDragDistance < -50 && photoData != null) {
-                          isDetailsLoading = true;
-                          await showModalBottomSheet(
-                            context: dialogContext,
-                            backgroundColor: Colors.transparent,
-                            isScrollControlled: true,
-                            builder: (context) {
-                              Future.delayed(const Duration(milliseconds: 500),
-                                  () {
-                                if (context.mounted) {
-                                  isDetailsLoading = false;
-                                  (context as Element).markNeedsBuild();
-                                }
-                              });
+                ),
+                if (hasDetails)
+                  GestureDetector(
+                    onVerticalDragUpdate: (details) {
+                      totalDragDistance += details.primaryDelta!;
+                    },
+                    onVerticalDragEnd: (details) async {
+                      if (totalDragDistance < -50 && photoData != null) {
+                        isDetailsLoading = true;
+                        await showModalBottomSheet(
+                          context: dialogContext,
+                          backgroundColor: Colors.transparent,
+                          isScrollControlled: true,
+                          builder: (context) {
+                            Future.delayed(const Duration(milliseconds: 500),
+                                () {
+                              if (context.mounted) {
+                                isDetailsLoading = false;
+                                (context as Element).markNeedsBuild();
+                              }
+                            });
 
-                              return Container(
-                                height:
-                                    MediaQuery.of(context).size.height * 0.7,
-                                decoration: const BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.vertical(
-                                      top: Radius.circular(20)),
-                                  boxShadow: [
-                                    BoxShadow(
-                                        color: Colors.black12,
-                                        spreadRadius: 1,
-                                        blurRadius: 10)
-                                  ],
-                                ),
-                                child: Stack(
-                                  children: [
-                                    Column(
-                                      children: [
-                                        Container(
-                                          margin:
-                                              const EdgeInsets.only(top: 12),
-                                          width: 40,
-                                          height: 4,
-                                          decoration: BoxDecoration(
-                                            color: Colors.grey[300],
-                                            borderRadius:
-                                                BorderRadius.circular(2),
-                                          ),
-                                        ),
-                                        const Padding(
-                                          padding: EdgeInsets.all(20),
-                                          child: Text(
-                                            'Dettagli Foto',
-                                            style: TextStyle(
-                                                fontSize: 24,
-                                                fontWeight: FontWeight.bold),
-                                          ),
-                                        ),
-                                        Expanded(
-                                          child: ListView.builder(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 20),
-                                            itemCount:
-                                                photoData!['data'].length,
-                                            itemBuilder: (context, idx) {
-                                              final item =
-                                                  photoData!['data'][idx];
-                                              return Card(
-                                                elevation: 2,
-                                                margin: const EdgeInsets.only(
-                                                    bottom: 16),
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(12),
-                                                ),
-                                                child: Padding(
-                                                  padding:
-                                                      const EdgeInsets.all(16),
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: [
-                                                      Text(
-                                                          'Tipo: ${item['type'] ?? 'N/A'}'),
-                                                      const SizedBox(height: 8),
-                                                      Text(
-                                                          'Marca: ${item['brand'] ?? 'N/A'}'),
-                                                      const SizedBox(height: 8),
-                                                      Text(
-                                                          'Modello: ${item['model'] ?? 'N/A'}'),
-                                                      const SizedBox(height: 8),
-                                                      Text(
-                                                          'Feedback: ${item['feedback'] ?? 'N/A'}'),
-                                                    ],
-                                                  ),
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    if (isDetailsLoading)
+                            return Container(
+                              height: MediaQuery.of(context).size.height * 0.7,
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(20)),
+                                boxShadow: [
+                                  BoxShadow(
+                                      color: Colors.black12,
+                                      spreadRadius: 1,
+                                      blurRadius: 10)
+                                ],
+                              ),
+                              child: Stack(
+                                children: [
+                                  Column(
+                                    children: [
                                       Container(
-                                        color: Colors.black.withOpacity(0.5),
-                                        child: const Center(
-                                          child: CircularProgressIndicator(
-                                              color: Colors.white),
+                                        margin: const EdgeInsets.only(top: 12),
+                                        width: 40,
+                                        height: 4,
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[300],
+                                          borderRadius:
+                                              BorderRadius.circular(2),
                                         ),
                                       ),
-                                  ],
-                                ),
-                              );
-                            },
-                          );
-                        }
-                        totalDragDistance = 0.0;
-                      },
-                      behavior: HitTestBehavior.translucent,
-                    ),
-                  if (showSwipeIndicator && hasDetails && animation != null)
-                    Positioned(
-                      bottom: 40,
-                      child: SlideTransition(
-                        position: animation,
-                        child: Column(
-                          children: const [
-                            Icon(Icons.keyboard_arrow_up,
-                                color: Colors.white, size: 36),
-                            SizedBox(height: 4),
-                            Text(
-                              'Scorri verso l\'alto per i dettagli',
-                              style:
-                                  TextStyle(color: Colors.white, fontSize: 14),
-                            ),
-                          ],
-                        ),
+                                      Padding(
+                                        padding: const EdgeInsets.all(20),
+                                        child: Text(
+                                          AppLocalizations.of(context)
+                                              .photo_details,
+                                          style: const TextStyle(
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: ListView.builder(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 20),
+                                          itemCount: photoData!['data'].length,
+                                          itemBuilder: (context, idx) {
+                                            final item =
+                                                photoData!['data'][idx];
+                                            return Card(
+                                              elevation: 2,
+                                              margin: const EdgeInsets.only(
+                                                  bottom: 16),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.all(16),
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(AppLocalizations.of(
+                                                            context)
+                                                        .type(item['type'] ??
+                                                            'N/A')),
+                                                    const SizedBox(height: 8),
+                                                    Text(AppLocalizations.of(
+                                                            context)
+                                                        .brand(item['brand'] ??
+                                                            'N/A')),
+                                                    const SizedBox(height: 8),
+                                                    Text(AppLocalizations.of(
+                                                            context)
+                                                        .model(item['model'] ??
+                                                            'N/A')),
+                                                    const SizedBox(height: 8),
+                                                    Text(AppLocalizations.of(
+                                                            context)
+                                                        .feedback(
+                                                            item['feedback'] ??
+                                                                'N/A')),
+                                                  ],
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (isDetailsLoading)
+                                    Container(
+                                      color: Colors.black.withOpacity(0.5),
+                                      child: const Center(
+                                        child: CircularProgressIndicator(
+                                            color: Colors.white),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      }
+                      totalDragDistance = 0.0;
+                    },
+                    behavior: HitTestBehavior.translucent,
+                  ),
+                if (showSwipeIndicator && hasDetails && animation != null)
+                  Positioned(
+                    bottom: 40,
+                    child: SlideTransition(
+                      position: animation,
+                      child: Column(
+                        children: [
+                          const Icon(Icons.keyboard_arrow_up,
+                              color: Colors.white, size: 36),
+                          const SizedBox(height: 4),
+                          Text(
+                            AppLocalizations.of(context).swipe_up_for_details,
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 14),
+                          ),
+                        ],
                       ),
                     ),
-                  if (isLoading)
-                    const Center(
-                        child: CircularProgressIndicator(color: Colors.white)),
-                  // Nessuna "X" come richiesto
-                ],
-              ),
-            );
-          },
-        );
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Nessun dettaglio disponibile'),
-              backgroundColor: Colors.red,
+                  ),
+                if (isLoading)
+                  const Center(
+                      child: CircularProgressIndicator(color: Colors.white)),
+              ],
             ),
           );
-        }
-      }
+        },
+      );
+
+      // Pulizia dei controller dopo la chiusura del dialog
+      transformationController.dispose();
+      animationController.dispose();
     } catch (e) {
-      print('Error in _handleImageLongPress: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Errore durante l\'operazione'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showErrorSnackbar(AppLocalizations.of(context).operation_error);
       }
     } finally {
       if (mounted) {
@@ -1381,6 +1352,57 @@ class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
         });
       }
     }
+  }
+
+  void _showErrorSnackbar(String message) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final overlay = OverlayEntry(
+        builder: (context) => Positioned(
+          top: MediaQuery.of(context).padding.top + 10,
+          left: 0,
+          right: 0,
+          child: Material(
+            color: Colors.transparent,
+            child: Center(
+              child: Container(
+                width: 300,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: Text(
+                        message,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      Overlay.of(context).insert(overlay);
+
+      Future.delayed(const Duration(seconds: 3), () {
+        overlay.remove();
+      });
+    });
   }
 
   Widget _buildInfoRow(String label, String value) {
@@ -1423,7 +1445,8 @@ class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(data['message'] ?? 'Foto salvata con successo'),
+            content: Text(data['message'] ??
+                AppLocalizations.of(context).photo_saved_successfully),
             backgroundColor: Colors.green,
           ),
         );
@@ -1432,21 +1455,20 @@ class EventPage extends State<EventPageControl> with TickerProviderStateMixin {
         try {
           final Map<String, dynamic> errorData = jsonDecode(response.body);
           throw Exception(
-              errorData['message'] ?? 'Errore durante il salvataggio');
+              errorData['message'] ?? 'Error during save operation');
         } catch (e) {
-          throw Exception(
-              'Errore durante il salvataggio: ${response.statusCode}');
+          throw Exception('Error during save: ${response.statusCode}');
         }
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Impossibile salvare la foto. Riprova più tardi.'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).save_photo_error),
           backgroundColor: Colors.red,
         ),
       );
 
-      throw Exception("Impossibile connettersi all'API.");
+      throw Exception("Unable to connect to the API.");
     }
   }
 }

@@ -44,7 +44,7 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
   }
 
   void _showPermissionDeniedDialog() {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     showCupertinoDialog(
       context: context,
       builder: (context) => CupertinoAlertDialog(
@@ -61,7 +61,7 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
   }
 
   void _showPermanentDeniedDialog() {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     showCupertinoDialog(
       context: context,
       builder: (context) => CupertinoAlertDialog(
@@ -103,7 +103,7 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
   }
 
   void _showLocationErrorDialog(String error) {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     showCupertinoDialog(
       context: context,
       builder: (context) => CupertinoAlertDialog(
@@ -128,7 +128,7 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(localizations.select_location)),
       body: Stack(
@@ -169,7 +169,7 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
   }
 
   Set<Marker> _createMarkers() {
-    final localizations = AppLocalizations.of(context)!;
+    final localizations = AppLocalizations.of(context);
     return {
       if (currentLocation != null)
         Marker(

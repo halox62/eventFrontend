@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class ShareProfileDialog extends StatelessWidget {
   final String? email;
-  //final String host = "event-production.up.railway.app";
   final String host = "www.event-fit.it";
 
   const ShareProfileDialog({Key? key, required this.email}) : super(key: key);
@@ -18,16 +18,16 @@ class ShareProfileDialog extends StatelessWidget {
     if (profileUrl != null) {
       Clipboard.setData(ClipboardData(text: profileUrl!));
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Link copiato negli appunti')),
+        SnackBar(content: Text(AppLocalizations.of(context).link_copied)),
       );
     }
   }
 
-  void _shareLink() {
+  void _shareLink(BuildContext context) {
     if (profileUrl != null) {
       Share.share(
-        'Guarda il mio profilo: $profileUrl',
-        subject: 'Condividi profilo',
+        AppLocalizations.of(context).view_my_profile(profileUrl!),
+        subject: AppLocalizations.of(context).share_profile_subject,
       );
     }
   }
@@ -36,24 +36,24 @@ class ShareProfileDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     if (email == null) {
       return AlertDialog(
-        title: const Text('Errore'),
-        content: const Text('Email non disponibile'),
+        title: Text(AppLocalizations.of(context).error_title),
+        content: Text(AppLocalizations.of(context).email_not_available),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Chiudi'),
+            child: Text(AppLocalizations.of(context).close),
           ),
         ],
       );
     }
 
     return AlertDialog(
-      title: const Text('Condividi profilo'),
+      title: Text(AppLocalizations.of(context).share_profile_title),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Link al profilo:'),
+          Text(AppLocalizations.of(context).profile_link_label),
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.all(8),
@@ -73,7 +73,7 @@ class ShareProfileDialog extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.copy),
                   onPressed: () => _copyToClipboard(context),
-                  tooltip: 'Copia link',
+                  tooltip: AppLocalizations.of(context).copy_link,
                 ),
               ],
             ),
@@ -86,10 +86,10 @@ class ShareProfileDialog extends StatelessWidget {
           style: TextButton.styleFrom(
             foregroundColor: Colors.black,
           ),
-          child: const Text('Chiudi'),
+          child: Text(AppLocalizations.of(context).close),
         ),
         ElevatedButton.icon(
-          onPressed: _shareLink,
+          onPressed: () => _shareLink(context),
           icon: const Icon(
             Icons.share,
             color: Colors.black,
@@ -97,7 +97,7 @@ class ShareProfileDialog extends StatelessWidget {
           style: TextButton.styleFrom(
             foregroundColor: Colors.black,
           ),
-          label: const Text('Condividi'),
+          label: Text(AppLocalizations.of(context).share),
         ),
       ],
     );

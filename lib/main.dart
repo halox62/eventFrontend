@@ -21,7 +21,6 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      // Aggiungi supporto per le localizzazioni
       localizationsDelegates: [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
@@ -29,9 +28,10 @@ class MyApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: [
-        Locale('en'), // Inglese
+        Locale('en'),
+        Locale('it'),
       ],
-      title: 'Flutter Demo',
+      title: 'EventFit',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
@@ -52,7 +52,6 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      // Mantieni le stesse impostazioni di localizzazione
       localizationsDelegates: [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
@@ -60,7 +59,8 @@ class _MyHomePageState extends State<MyHomePage> {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: [
-        Locale('en'), // Inglese
+        Locale('en'),
+        Locale('it'),
       ],
       title: 'app',
       theme: ThemeData(),

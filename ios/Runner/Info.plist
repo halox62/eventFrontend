@@ -28,7 +28,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>
-	<string>????</string>
+	<string>1.1.0</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>GMSApiKey</key>
@@ -36,13 +36,13 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>This app needs camera access to take photos</string>
+	<string>This app requires access to your camera to capture photos that will be used for app features such as profile pictures and posting</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>We need your location to provide advanced features.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Location permission is required.</string>
+	<string>Location permission is required for app features, it is used to check if you are close to the event to allow photo uploading which is only possible if you are close enough to the event</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>This app needs access to the photo library to upload photos</string>
+	<string>This app requires access to your photo library to capture photos that will be used for app features such as profile pictures and posting</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

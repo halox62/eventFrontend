@@ -357,11 +357,10 @@ class _ScoreboardPageState extends State<ScoreboardPage> {
     try {
       await _fetchScoreboard();
     } catch (e) {
-      print('Errore durante il refresh: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Errore durante l\'aggiornamento'),
+            content: Text('Error'),
             behavior: SnackBarBehavior.floating,
           ),
         );

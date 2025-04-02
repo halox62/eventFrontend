@@ -15,6 +15,7 @@ import 'package:social_flutter_giorgio/screens/AuthPage.dart';
 import 'package:social_flutter_giorgio/screens/EventPage.dart';
 import 'package:social_flutter_giorgio/screens/SelectLocationScreenState.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class EventCalendar extends StatefulWidget {
   const EventCalendar({Key? key}) : super(key: key);
@@ -39,11 +40,63 @@ class _EventCalendarState extends State<EventCalendar> {
   late BuildContext _dialogContext;
   int count = 0;
   bool _isLoadingDialogShown = false;
+  bool showEventDetails = false;
 
   @override
   void initState() {
     super.initState();
     _initializePageEvent(true);
+  }
+
+  void _showOKSnackbar(String message) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final overlay = OverlayEntry(
+        builder: (context) => Positioned(
+          top: MediaQuery.of(context).padding.top + 10,
+          left: 0,
+          right: 0,
+          child: Material(
+            color: Colors.transparent,
+            child: Center(
+              child: Container(
+                width: 300,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.check_circle_outline,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 12),
+                    Flexible(
+                      child: Text(
+                        message,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      Overlay.of(context).insert(overlay);
+
+      Future.delayed(const Duration(seconds: 3), () {
+        overlay.remove();
+      });
+    });
   }
 
   void showLoadingDialog(String message) {
@@ -76,14 +129,14 @@ class _EventCalendarState extends State<EventCalendar> {
   Future<void> _initializePageEvent(bool loading) async {
     try {
       if (loading) {
-        showLoadingDialog("Caricamento Eventi");
+        showLoadingDialog(AppLocalizations.of(context).loading_events);
       }
 
       await _initializeEventCreate();
       await _initializeEventSubscribe();
       Navigator.of(_dialogContext).pop();
     } catch (e) {
-      _showFeedbackMessage('Errore durante il caricamento', isError: true);
+      _showFeedbackMessage(AppLocalizations.of(context).error, isError: true);
     }
   }
 
@@ -117,11 +170,6 @@ class _EventCalendarState extends State<EventCalendar> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? token = prefs.getString('jwtToken');
 
-    if (token == null) {
-      _showFeedbackMessage('Errore: Sessione non valida', isError: true);
-      return;
-    }
-
     try {
       final headers = {
         'Content-Type': 'application/json',
@@ -139,20 +187,16 @@ class _EventCalendarState extends State<EventCalendar> {
       );
 
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Evento cancellato con successo!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        _showOKSnackbar(AppLocalizations.of(context).delete_successfully);
+
         await _initializeEventCreate();
         await _initializeEventSubscribe();
       } else {
-        _showFeedbackMessage('Errore durante l\'eliminazione dell\'evento',
+        _showFeedbackMessage(AppLocalizations.of(context).error_delete,
             isError: true);
       }
     } catch (e) {
-      _showFeedbackMessage('Errore di connessione durante l\'eliminazione',
+      _showFeedbackMessage(AppLocalizations.of(context).error_delete,
           isError: true);
     }
     Navigator.of(_dialogContext).pop();
@@ -164,8 +208,8 @@ class _EventCalendarState extends State<EventCalendar> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Errore durante l\'aggiornamento'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context).error),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -227,8 +271,7 @@ class _EventCalendarState extends State<EventCalendar> {
           _checkTokenValidity(response.statusCode);
         }
       } catch (e) {
-        _showFeedbackMessage('Errore di connessione durante l\'eliminazione',
-            isError: true);
+        _showFeedbackMessage(AppLocalizations.of(context).error, isError: true);
       }
     }
   }
@@ -254,8 +297,7 @@ class _EventCalendarState extends State<EventCalendar> {
         _checkTokenValidity(response.statusCode);
       }
     } catch (e) {
-      _showFeedbackMessage('Errore di connessione durante l\'eliminazione',
-          isError: true);
+      _showFeedbackMessage(AppLocalizations.of(context).error, isError: true);
     }
   }
 
@@ -295,17 +337,18 @@ class _EventCalendarState extends State<EventCalendar> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Conferma eliminazione'),
-          content:
-              Text('Sei sicuro di voler eliminare l\'evento "$eventName"?'),
+          title: Text(AppLocalizations.of(context).conferm_delete),
+          content: Text(
+              AppLocalizations.of(context).conferm_delete_event(eventName)),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Annulla'),
+              child: Text(AppLocalizations.of(context).cancel),
             ),
             TextButton(
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.red,
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.errorContainer,
+                foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
               ),
               onPressed: () async {
                 try {
@@ -313,7 +356,8 @@ class _EventCalendarState extends State<EventCalendar> {
                   Navigator.of(context).pop();
 
                   // Show loading dialog
-                  showLoadingDialog("Eliminazione evento in corso...");
+                  showLoadingDialog(
+                      AppLocalizations.of(context).deleting_event_in_progress);
 
                   // Wait for delete operation to complete
                   await delete_event(eventCode);
@@ -324,8 +368,9 @@ class _EventCalendarState extends State<EventCalendar> {
                   // Show success message
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Evento eliminato con successo'),
+                      SnackBar(
+                        content: Text(
+                            AppLocalizations.of(context).delete_successfully),
                         duration: Duration(seconds: 2),
                       ),
                     );
@@ -338,8 +383,8 @@ class _EventCalendarState extends State<EventCalendar> {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(
-                            'Errore durante l\'eliminazione: ${e.toString()}'),
+                        content:
+                            Text(AppLocalizations.of(context).error_delete),
                         backgroundColor: Colors.red,
                         duration: Duration(seconds: 3),
                       ),
@@ -347,7 +392,7 @@ class _EventCalendarState extends State<EventCalendar> {
                   }
                 }
               },
-              child: const Text('Elimina'),
+              child: Text(AppLocalizations.of(context).delete),
             ),
           ],
         );
@@ -357,6 +402,8 @@ class _EventCalendarState extends State<EventCalendar> {
 
   // Funzione per mostrare i dettagli dell'evento
   void _showEventDetails(DateTime date) async {
+    if (showEventDetails) return;
+    showEventDetails = true;
     try {
       final events = await fetchEventsByDate(date);
 
@@ -383,7 +430,7 @@ class _EventCalendarState extends State<EventCalendar> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Dettagli Eventi',
+                            AppLocalizations.of(context).event_details,
                             style: Theme.of(context)
                                 .textTheme
                                 .headlineSmall
@@ -444,7 +491,7 @@ class _EventCalendarState extends State<EventCalendar> {
                                                             event['eventCode'] ??
                                                                 '',
                                                             event['eventName'] ??
-                                                                'questo evento'),
+                                                                ''),
                                                     backgroundColor: Colors.red,
                                                     child: const Icon(
                                                         Icons.delete,
@@ -456,20 +503,22 @@ class _EventCalendarState extends State<EventCalendar> {
                                             _buildInfoRow(
                                               context,
                                               Icons.event,
-                                              'Codice',
+                                              AppLocalizations.of(context).code,
                                               event['eventCode'] ?? 'N/A',
                                               isCode: true,
                                             ),
                                             _buildInfoRow(
                                               context,
                                               Icons.calendar_today,
-                                              'Data Inizio',
+                                              AppLocalizations.of(context)
+                                                  .start_date,
                                               event['eventDate'] ?? 'N/A',
                                             ),
                                             _buildInfoRow(
                                               context,
                                               Icons.access_time,
-                                              'Ora Inizio',
+                                              AppLocalizations.of(context)
+                                                  .start_time,
                                               event['endTime'] ?? 'N/A',
                                             ),
                                             const SizedBox(height: 16),
@@ -511,7 +560,7 @@ class _EventCalendarState extends State<EventCalendar> {
                                                       infoWindow: InfoWindow(
                                                         title: event[
                                                                 'eventName'] ??
-                                                            'Posizione Evento',
+                                                            'Position event',
                                                       ),
                                                     ),
                                                   },
@@ -546,8 +595,9 @@ class _EventCalendarState extends State<EventCalendar> {
                                                 ),
                                                 icon: const Icon(
                                                     Icons.visibility),
-                                                label: const Text(
-                                                    'Visualizza Dettagli'),
+                                                label: Text(
+                                                    AppLocalizations.of(context)
+                                                        .view_details),
                                               ),
                                             ),
                                           ],
@@ -569,12 +619,14 @@ class _EventCalendarState extends State<EventCalendar> {
             );
           },
         );
+        showEventDetails = false;
       } else {
-        _showFeedbackMessage('Nessun evento trovato per questa data');
+        _showFeedbackMessage(AppLocalizations.of(context).no_events_found);
       }
     } catch (e) {
-      _showFeedbackMessage('Errore nel caricamento degli eventi',
-          isError: true);
+      _showFeedbackMessage(AppLocalizations.of(context).error, isError: true);
+    } finally {
+      showEventDetails = false;
     }
   }
 
@@ -648,7 +700,7 @@ class _EventCalendarState extends State<EventCalendar> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'QR Code Evento',
+                    AppLocalizations.of(context).event_qr_code,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: Theme.of(context).colorScheme.onSurface,
                           fontWeight: FontWeight.bold,
@@ -686,7 +738,7 @@ class _EventCalendarState extends State<EventCalendar> {
                       backgroundColor: Colors.white,
                       errorStateBuilder: (context, error) => Center(
                         child: Text(
-                          'Errore nella generazione del QR Code',
+                          AppLocalizations.of(context).error_generate_qr,
                           style: TextStyle(
                               color: Theme.of(context).colorScheme.error),
                         ),
@@ -725,21 +777,11 @@ class _EventCalendarState extends State<EventCalendar> {
                       onPressed: () async {
                         await Clipboard.setData(ClipboardData(text: code));
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content:
-                                  const Text('Codice copiato negli appunti'),
-                              backgroundColor: Colors.green,
-                              behavior: SnackBarBehavior.floating,
-                              width: 300,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          );
+                          _showOKSnackbar(
+                              AppLocalizations.of(context).code_copied);
                         }
                       },
-                      tooltip: 'Copia codice',
+                      tooltip: 'Copia code',
                     ),
                   ],
                 ),
@@ -776,8 +818,8 @@ class _EventCalendarState extends State<EventCalendar> {
                   FilledButton.icon(
                     onPressed: () async {
                       await Share.share(
-                        'Codice evento: $code',
-                        subject: 'QR Code Evento',
+                        'Event code: $code',
+                        subject: 'QR Code',
                       );
                     },
                     style: FilledButton.styleFrom(
@@ -792,8 +834,8 @@ class _EventCalendarState extends State<EventCalendar> {
                       ),
                     ),
                     icon: const Icon(Icons.share, size: 20),
-                    label: const Text(
-                      'Condividi',
+                    label: Text(
+                      AppLocalizations.of(context).share,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -813,7 +855,7 @@ class _EventCalendarState extends State<EventCalendar> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Calendario Eventi'),
+        title: Text(AppLocalizations.of(context).events_calendar),
       ),
       body: RefreshIndicator(
         onRefresh: _handleRefresh,
@@ -951,10 +993,8 @@ class _EventCalendarState extends State<EventCalendar> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Aggiungi codice evento',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  AppLocalizations.of(context).add_event_code,
+                  style: theme.textTheme.headlineSmall?.copyWith(),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
@@ -978,42 +1018,40 @@ class _EventCalendarState extends State<EventCalendar> {
                     size: 24,
                     color: Colors.white,
                   ),
-                  label: const Text(
-                    'Scansiona QR Code',
+                  label: Text(
+                    AppLocalizations.of(context).scan_qr_code,
                     style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color: Colors.white),
                   ),
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  'oppure',
+                /*const SizedBox(height: 16),
+                Text(
+                  AppLocalizations.of(context).or,
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey,
                   ),
                   textAlign: TextAlign.center,
-                ),
+                ),*/
                 const SizedBox(height: 16),
                 TextField(
                   controller: codeController,
                   maxLength: 8,
                   style: const TextStyle(fontSize: 16),
                   decoration: InputDecoration(
-                    labelText: 'Codice evento',
-                    hintText: 'Inserisci 8 caratteri',
-                    labelStyle: const TextStyle(
-                        color: Colors.black), // Changed to green
+                    labelText: AppLocalizations.of(context).event_code,
+                    hintText: AppLocalizations.of(context).enter_8_characters,
+                    labelStyle: const TextStyle(color: Colors.grey),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                          color: Colors.green), // Changed to green
+                      borderSide: const BorderSide(color: Colors.green),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: const BorderSide(
-                        color: Colors.green, // Changed to green
+                        color: Colors.green,
                         width: 2,
                       ),
                     ),
@@ -1041,10 +1079,10 @@ class _EventCalendarState extends State<EventCalendar> {
                           vertical: 12,
                         ),
                       ),
-                      child: const Text(
-                        'Annulla',
+                      child: Text(
+                        AppLocalizations.of(context).cancel,
                         style: TextStyle(
-                          color: Color.fromARGB(255, 223, 91, 91),
+                          color: Colors.grey,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -1055,7 +1093,8 @@ class _EventCalendarState extends State<EventCalendar> {
                         if (codeController.text.length == 8) {
                           try {
                             // Show loading dialog
-                            showLoadingDialog("Aggiunta evento in corso...");
+                            showLoadingDialog(AppLocalizations.of(context)
+                                .add_event_in_progress);
 
                             // Wait for the addEvent to complete
                             await addEvent(codeController.text);
@@ -1064,8 +1103,7 @@ class _EventCalendarState extends State<EventCalendar> {
                             hideLoadingDialog();
 
                             // Close the current dialog
-                            if (dialogContext != null &&
-                                Navigator.of(dialogContext).canPop()) {
+                            if (Navigator.of(dialogContext).canPop()) {
                               Navigator.of(dialogContext).pop();
                             }
                           } catch (e) {
@@ -1076,7 +1114,7 @@ class _EventCalendarState extends State<EventCalendar> {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('Errore: ${e.toString()}'),
+                                  content: Text('Error'),
                                   backgroundColor: Colors.red,
                                   duration: Duration(seconds: 3),
                                 ),
@@ -1085,8 +1123,9 @@ class _EventCalendarState extends State<EventCalendar> {
                           }
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Attenzione codice sbagliato!'),
+                            SnackBar(
+                              content: Text(AppLocalizations.of(context)
+                                  .warning_incorrect_code),
                               backgroundColor: Colors.red,
                             ),
                           );
@@ -1104,8 +1143,8 @@ class _EventCalendarState extends State<EventCalendar> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text(
-                        'Conferma',
+                      child: Text(
+                        AppLocalizations.of(context).confirm,
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w600,
@@ -1140,24 +1179,13 @@ class _EventCalendarState extends State<EventCalendar> {
       if (response.statusCode == 200) {
         await _initializeEventCreate();
         await _initializeEventSubscribe();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Evento aggiunto con successo!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        _showOKSnackbar(AppLocalizations.of(context).event_added_successfully);
       } else {
         _checkTokenValidity(response.statusCode);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Attenzione codice sbagliato!'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showErrorSnackbar(AppLocalizations.of(context).warning_incorrect_code);
       }
     } catch (error) {
-      _showFeedbackMessage('Errore di connessione durante l\'eliminazione',
-          isError: true);
+      _showFeedbackMessage(AppLocalizations.of(context).error, isError: true);
     }
     return "ok";
   }
@@ -1187,16 +1215,16 @@ class _EventCalendarState extends State<EventCalendar> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'Crea Evento',
+                      AppLocalizations.of(context).create_event,
                       style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                          //fontWeight: FontWeight.bold,
+                          ),
                     ),
                     const SizedBox(height: 24),
                     TextFormField(
                       onChanged: (value) => setState(() => eventName = value),
                       decoration: InputDecoration(
-                        labelText: 'Nome Evento',
+                        labelText: AppLocalizations.of(context).event_name,
                         filled: true,
                         fillColor: Colors.grey[50],
                         border: OutlineInputBorder(
@@ -1220,11 +1248,11 @@ class _EventCalendarState extends State<EventCalendar> {
                           child: _buildSelectionTile(
                             context: context,
                             icon: Icons.calendar_today,
-                            title: 'Data',
+                            title: AppLocalizations.of(context).date,
                             value: selectedDate != null
                                 ? DateFormat('dd MMM yyyy')
                                     .format(selectedDate!)
-                                : 'Seleziona',
+                                : AppLocalizations.of(context).select,
                             onTap: () async {
                               final date = await showDatePicker(
                                 context: context,
@@ -1243,10 +1271,10 @@ class _EventCalendarState extends State<EventCalendar> {
                           child: _buildSelectionTile(
                             context: context,
                             icon: Icons.access_time,
-                            title: 'Ora',
+                            title: AppLocalizations.of(context).time,
                             value: selectedTime != null
                                 ? selectedTime!.format(context)
-                                : 'Seleziona',
+                                : AppLocalizations.of(context).select,
                             onTap: () async {
                               final time = await showTimePicker(
                                 context: context,
@@ -1264,10 +1292,10 @@ class _EventCalendarState extends State<EventCalendar> {
                     _buildSelectionTile(
                       context: context,
                       icon: Icons.location_on,
-                      title: 'Posizione',
+                      title: AppLocalizations.of(context).location,
                       value: selectedLocation != null
                           ? '${selectedLocation!.latitude.toStringAsFixed(2)}, ${selectedLocation!.longitude.toStringAsFixed(2)}'
-                          : 'Seleziona',
+                          : AppLocalizations.of(context).select,
                       onTap: () async {
                         final result = await Navigator.push(
                           context,
@@ -1300,7 +1328,8 @@ class _EventCalendarState extends State<EventCalendar> {
                                 position: LatLng(selectedLocation!.latitude,
                                     selectedLocation!.longitude),
                                 infoWindow: InfoWindow(
-                                  title: "Posizione Selezionata",
+                                  title: AppLocalizations.of(context)
+                                      .select_location,
                                   snippet:
                                       "${selectedLocation!.latitude}, ${selectedLocation!.longitude}",
                                 ),
@@ -1317,7 +1346,7 @@ class _EventCalendarState extends State<EventCalendar> {
                         TextButton(
                           onPressed: () => Navigator.of(context).pop(),
                           child: Text(
-                            'Annulla',
+                            AppLocalizations.of(context).cancel,
                             style: TextStyle(color: Colors.grey[600]),
                           ),
                         ),
@@ -1341,7 +1370,8 @@ class _EventCalendarState extends State<EventCalendar> {
                               vertical: 12,
                             ),
                           ),
-                          child: const Text('Crea Evento'),
+                          child:
+                              Text(AppLocalizations.of(context).create_event),
                         ),
                       ],
                     ),
@@ -1468,24 +1498,18 @@ class _EventCalendarState extends State<EventCalendar> {
       if (response.statusCode == 201) {
         await _initializeEventCreate();
         await _initializeEventSubscribe();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Evento creato con successo!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        _showOKSnackbar(AppLocalizations.of(context).event_create_successfully);
 
         return "ok";
       } else {
         _checkTokenValidity(response.statusCode);
 
-        _showErrorSnackbar("Evento non creato!");
+        _showErrorSnackbar(AppLocalizations.of(context).event_not_created);
 
         return "NO";
       }
     } catch (error) {
-      _showErrorSnackbar("Errore durante la creazione dell'evento");
+      _showErrorSnackbar(AppLocalizations.of(context).error);
 
       return "NO";
     }
@@ -1498,7 +1522,7 @@ class _EventCalendarState extends State<EventCalendar> {
       DateTime todayOnlyDate = DateTime(today.year, today.month, today.day);
 
       if (selectedDate.isBefore(todayOnlyDate)) {
-        _showErrorSnackbar("La data selezionata è precedente a oggi!");
+        _showErrorSnackbar(AppLocalizations.of(context).date_before_today);
 
         return;
       }
@@ -1509,12 +1533,13 @@ class _EventCalendarState extends State<EventCalendar> {
         TimeOfDay now = TimeOfDay.now();
         if (timeOfDay.hour < now.hour ||
             (timeOfDay.hour == now.hour && timeOfDay.minute < now.minute)) {
-          _showErrorSnackbar("L'orario selezionato è già passato!");
+          _showErrorSnackbar(AppLocalizations.of(context).time_already_passed);
           return;
         }
       }
 
-      showLoadingDialog("Creazione evento in corso...");
+      showLoadingDialog(
+          AppLocalizations.of(context).creating_event_in_progress);
 
       String data = _generateRandomString(8);
       String res =
@@ -1558,8 +1583,8 @@ class _EventCalendarState extends State<EventCalendar> {
                           backgroundColor: Colors.white,
                         ),
                         const SizedBox(height: 16),
-                        const Text(
-                          'Condividi il tuo QR Code!',
+                        Text(
+                          AppLocalizations.of(context).share_your_qr_code,
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 16),
@@ -1592,8 +1617,9 @@ class _EventCalendarState extends State<EventCalendar> {
                                         .hideCurrentSnackBar();
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                        content: const Text(
-                                            'Codice copiato negli appunti'),
+                                        content: Text(
+                                            AppLocalizations.of(context)
+                                                .code_copied),
                                         backgroundColor: Colors.green,
                                         behavior: SnackBarBehavior.floating,
                                         width: 300,
@@ -1607,7 +1633,7 @@ class _EventCalendarState extends State<EventCalendar> {
                                 },
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(),
-                                tooltip: 'Copia codice',
+                                tooltip: AppLocalizations.of(context).copi_code,
                               ),
                             ],
                           ),
@@ -1620,15 +1646,15 @@ class _EventCalendarState extends State<EventCalendar> {
                           children: [
                             OutlinedButton.icon(
                               icon: const Icon(Icons.share),
-                              label: const Text('Condividi'),
+                              label: Text(AppLocalizations.of(context).share),
                               onPressed: () {
                                 Share.share(
-                                    'Unisciti al mio evento con il codice: $data');
+                                    'Join my event with the code: $data');
                               },
                             ),
                             const SizedBox(width: 16),
                             ElevatedButton(
-                              child: const Text('Chiudi'),
+                              child: const Text('Close'),
                               onPressed: () {
                                 Navigator.of(dialogContext).pop();
                                 // Aggiorna lo stato se necessario

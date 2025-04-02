@@ -1,0 +1,1032 @@
+{
+    "@@locale": "it",
+    "appTitle": "EventFit",
+    "homePageTitle": "Pagina iniziale Flutter",
+
+    
+    "permissions_required": "L'accesso alla fotocamera e alla libreria fotografica è essenziale per la funzionalità dell'immagine del profilo",
+    "permissions_title": "Permessi per l'immagine del profilo",
+    "permissions_description": "EventFit necessita dell'accesso alla tua fotocamera e alla libreria fotografica per aiutarti a creare un profilo personalizzato. Questo ti permette di:\n\n• Scattare una nuova foto direttamente nell'app\n• Scegliere una foto esistente dalla tua galleria\n• Personalizzare facilmente la tua immagine del profilo\n\nLa tua privacy è importante. Accediamo alle immagini solo quando scegli esplicitamente di caricare una foto del profilo.",
+    "continue_text": "Concedi i permessi",
+    "cancel": "Non ora",
+
+    
+    "permissions_denied_title": "Permessi negati",
+    "permissions_denied_description": "Sembra che tu abbia negato permanentemente l'accesso alla fotocamera o alla libreria fotografica. Per utilizzare questa funzione, dovrai abilitare i permessi nelle impostazioni del tuo dispositivo.",
+    "open_settings": "Apri impostazioni",
+    "cancel": "Annulla",
+
+
+
+    "welcome_back": "Bentornato",
+    "create_account": "Crea account", 
+    "sign_in_to_continue": "Accedi per continuare",
+    "create_account_start": "Crea il tuo account per iniziare",
+    "email_label": "Email",
+    "email_required": "L'email è obbligatoria",
+    "email_invalid": "Inserisci un'email valida",
+    "password_label": "Password",
+    "password_required": "La password è obbligatoria", 
+    "password_length": "La password deve essere lunga almeno 8 caratteri",
+    "username_label": "Nome utente",
+    "username_required": "Il nome utente è obbligatorio",
+    "forgot_password": "Password dimenticata?",
+    "sign_in_button": "Accedi",
+    "create_account_button": "Crea account",
+    "no_account": "Non hai un account? ",
+    "have_account": "Hai già un account? ",
+    "sign_up": "Registrati",
+    "sign_in": "Accedi",
+    "profile_image_missing": "Attenzione, manca l'immagine del profilo",
+    "registration_failed": "Registrazione fallita. Riprova.",
+    "login_failed": "Accesso fallito. Riprova.",
+    "account_not_present": "Account non presente",
+    "accept_privacy_policy": "Accetto la ",
+    "privacy_policy": "Politica sulla privacy",
+
+
+    
+    "select_location": "Seleziona posizione",
+    "loading_location": "Caricamento posizione...",
+    "current_location": "Posizione attuale",
+    "selected_location": "Posizione selezionata",
+    "location_permission_title": "Consenti accesso alla posizione",
+    "location_permission_required_message": "Abilita l'accesso alla posizione per migliorare la tua esperienza di scoperta degli eventi. Con il tuo permesso, possiamo:\n\n• Scoprire eventi vicini personalizzati per la tua posizione\n• Mostrare eventi e luoghi più vicini a te\n• Fornire raccomandazioni personalizzate sugli eventi in base alla tua zona\n• Aiutarti a trovare e raggiungere facilmente eventi locali",
+    "location_permission_disabled_title": "Accesso alla posizione necessario",
+    "location_permission_permanent_denied_message": "L'accesso alla posizione è fondamentale per raccomandazioni personalizzate sugli eventi. Vai nelle impostazioni del tuo dispositivo e abilita i permessi di localizzazione per questa app per sbloccare tutte le funzionalità.",
+    "location_error_title": "Problema di rilevamento della posizione",
+    "location_error_message": "Non siamo riusciti a recuperare la tua posizione attuale. Controlla le impostazioni del dispositivo o riprova.",
+    "ok": "OK",
+    "settings": "Impostazioni",
+    "cancel": "Annulla",
+
+
+    "delete_account": "Elimina account",
+    "conferm_delete_account": "Conferma eliminazione account",
+    "conferm_mex": "Sei sicuro di voler procedere con l'eliminazione del tuo account? Questa azione è irreversibile",
+    "cancel_mex": "No, annulla",
+    "proceed": "Sì, procedi",
+    "email": "Per procedere, inserisci la tua email:",
+    "enter_email": "Inserisci la tua email",
+    "email_match": "L'email non corrisponde",
+    "confirm": "Conferma",
+    "successfully_delete": "Account eliminato con successo",
+
+
+       
+    
+    
+    
+    "loading_events": "Caricamento eventi...",
+    "@loading_events": {
+        "description": "Messaggio mostrato durante il caricamento degli eventi"
+    },
+    
+    "error": "Errore",
+    "@error": {
+        "description": "Messaggio di errore generico"
+    },
+    
+    "delete_successfully": "Evento eliminato con successo",
+    "@delete_successfully": {
+        "description": "Messaggio mostrato quando un evento viene eliminato con successo"
+    },
+    
+    "error_delete": "Errore durante l'eliminazione dell'evento",
+    "@error_delete": {
+        "description": "Messaggio di errore specifico per l'eliminazione dell'evento"
+    },
+
+    "conferm_delete": "Conferma eliminazione",
+    "@conferm_delete": {
+        "description": "Messaggio di conferma eliminazione"
+    },
+    
+    "conferm_delete_event": "Confermi l'eliminazione dell'evento \"$eventName\"?",
+    "@conferm_delete_event": {
+        "description": "Messaggio di conferma per l'eliminazione di un evento, con un segnaposto per il nome dell'evento",
+        "placeholders": {
+        "eventName": {}
+        }
+    },
+    
+    "cancel": "Annulla",
+    "@cancel": {
+        "description": "Testo per il pulsante di annullamento"
+    },
+
+    "delete": "Elimina",
+    "@delete": {
+        "description": "Testo per il pulsante di eliminazione"
+    },
+    
+    "deleting_event_in_progress": "Eliminazione evento in corso...",
+    "@deleting_event_in_progress": {
+        "description": "Messaggio mostrato nel dialogo di caricamento durante l'eliminazione dell'evento"
+    },
+    
+    "event_details": "Dettagli evento",
+    "@event_details": {
+        "description": "Titolo del dialogo dei dettagli dell'evento"
+    },
+    
+    "code": "Codice",
+    "@code": {
+        "description": "Etichetta per il campo del codice dell'evento"
+    },
+    
+    "start_date": "Data di inizio",
+    "@start_date": {
+        "description": "Etichetta per il campo della data di inizio dell'evento"
+    },
+    
+    "start_time": "Ora di inizio",
+    "@start_time": {
+        "description": "Etichetta per il campo dell'ora di inizio dell'evento"
+    },
+    
+    "view_details": "Visualizza dettagli",
+    "@view_details": {
+        "description": "Testo per il pulsante per visualizzare i dettagli dell'evento"
+    },
+    
+    "no_events_found": "Nessun evento trovato per questa data",
+    "@no_events_found": {
+        "description": "Messaggio mostrato quando non vengono trovati eventi per una data selezionata"
+    },
+    
+    "event_qr_code": "Codice QR dell'evento",
+    "@event_qr_code": {
+        "description": "Titolo del dialogo del codice QR"
+    },
+    
+    "code_copied": "Codice copiato negli appunti",
+    "@code_copied": {
+        "description": "Messaggio mostrato quando il codice dell'evento viene copiato negli appunti"
+    },
+
+    "copi_code": "Copia codice",
+    "@copi_code": {
+        "description": "Copia codice"
+    },
+    
+    "share": "Condividi",
+    "@share": {
+        "description": "Testo per il pulsante di condivisione"
+    },
+
+    "error_generate_qr": "Errore nella generazione del codice QR",
+    "@error_generate_qr": {
+        "description": "Errore nella generazione del codice QR"
+    },
+    
+    "events_calendar": "Calendario eventi",
+    "@events_calendar": {
+        "description": "Titolo della schermata del calendario degli eventi"
+    },
+    
+    "add_event_code": "Aggiungi codice evento",
+    "@add_event_code": {
+        "description": "Titolo del dialogo per aggiungere un codice evento"
+    },
+    
+    "scan_qr_code": "Scansiona codice QR",
+    "@scan_qr_code": {
+        "description": "Testo per il pulsante per scansionare un codice QR"
+    },
+
+    "or": "o",
+    "@or": {
+        "description": "o"
+    },
+    
+    "event_code": "Codice evento",
+    "@event_code": {
+        "description": "Etichetta per il campo di input del codice evento"
+    },
+    
+    "enter_8_characters": "Inserisci 8 caratteri",
+    "@enter_8_characters": {
+        "description": "Testo di suggerimento per il campo di input del codice evento"
+    },
+    
+    "warning_incorrect_code": "Attenzione: codice errato!",
+    "@warning_incorrect_code": {
+        "description": "Messaggio mostrato quando viene inserito un codice evento errato"
+    },
+    
+    "confirm": "Conferma",
+    "@confirm": {
+        "description": "Testo per il pulsante di conferma"
+    },
+    
+    "create_event": "Crea evento",
+    "@create_event": {
+        "description": "Titolo del dialogo di creazione evento e testo per il pulsante di creazione evento"
+    },
+    
+    "event_name": "Nome evento",
+    "@event_name": {
+        "description": "Etichetta per il campo di input del nome dell'evento"
+    },
+    
+    "date": "Data",
+    "@date": {
+        "description": "Etichetta per il campo di selezione della data"
+    },
+    
+    "time": "Ora",
+    "@time": {
+        "description": "Etichetta per il campo di selezione dell'ora"
+    },
+    
+    "location": "Posizione",
+    "@location": {
+        "description": "Etichetta per il campo di selezione della posizione"
+    },
+    
+    "select": "Seleziona",
+    "@select": {
+        "description": "Valore predefinito per i campi di selezione prima che venga fatta una scelta"
+    },
+    
+    "event_added_successfully": "Evento aggiunto con successo!",
+    "@event_added_successfully": {
+        "description": "Messaggio mostrato quando un evento viene aggiunto con successo"
+    },
+
+    "event_create_successfully": "Evento creato con successo!",
+    "@event_added_successfully": {
+        "description": "Messaggio mostrato quando un evento viene creato con successo"
+    },
+    
+    "event_not_created": "Evento non creato!",
+    "@event_not_created": {
+        "description": "Messaggio mostrato quando la creazione dell'evento fallisce"
+    },
+    
+    "error_creating_event": "Errore durante la creazione dell'evento",
+    "@error_creating_event": {
+        "description": "Messaggio mostrato quando si verifica un errore durante la creazione dell'evento"
+    },
+    
+    "date_before_today": "La data selezionata è precedente a oggi!",
+    "@date_before_today": {
+        "description": "Messaggio mostrato quando la data selezionata è nel passato"
+    },
+    
+    "time_already_passed": "L'ora selezionata è già passata!",
+    "@time_already_passed": {
+        "description": "Messaggio mostrato quando l'ora selezionata è precedente all'ora corrente"
+    },
+    
+    "creating_event_in_progress": "Creazione evento in corso...",
+    "@creating_event_in_progress": {
+        "description": "Messaggio mostrato nel dialogo di caricamento durante la creazione dell'evento"
+    },
+
+    "add_event_in_progress": "Aggiunta evento in corso...",
+    "@add_event_in_progress": {
+        "description": "Messaggio mostrato nel dialogo di caricamento durante l'aggiunta dell'evento"
+    },
+
+    
+    
+    "share_your_qr_code": "Condividi il tuo codice QR!",
+    "@share_your_qr_code": {
+        "description": "Messaggio che incoraggia l'utente a condividere il codice QR"
+    },
+    
+    "close": "Chiudi",
+    "@close": {
+        "description": "Testo per il pulsante di chiusura"
+    },
+    
+    "connection_error_during_deletion": "Errore di connessione durante l'eliminazione",
+    "@connection_error_during_deletion": {
+        "description": "Messaggio mostrato quando si verifica un errore di rete durante l'eliminazione dell'evento"
+    },
+
+  
+    "loading_events": "Caricamento eventi",
+    "@loading_events": {
+      "description": "Messaggio mostrato durante il caricamento dei dati degli eventi"
+    },
+    
+    "no_info_available": "Nessuna informazione disponibile",
+    "@no_info_available": {
+      "description": "Messaggio mostrato quando non ci sono informazioni sugli eventi disponibili"
+    },
+    
+    "event_not_started": "L'evento non è ancora iniziato",
+    "@event_not_started": {
+      "description": "Messaggio mostrato nel dialogo del conto alla rovescia quando l'evento non è iniziato"
+    },
+    
+    "event_start_time": "Ora di inizio evento: {time}",
+    "@event_start_time": {
+      "description": "Messaggio che mostra l'ora di inizio programmata dell'evento",
+      "placeholders": {
+        "time": {}
+      }
+    },
+    
+    "hours": "Ore",
+    "@hours": {
+      "description": "Etichetta per le ore nel timer del conto alla rovescia"
+    },
+    
+    "minutes": "Minuti",
+    "@minutes": {
+      "description": "Etichetta per i minuti nel timer del conto alla rovescia"
+    },
+    
+    "seconds": "Secondi",
+    "@seconds": {
+      "description": "Etichetta per i secondi nel timer del conto alla rovescia"
+    },
+    
+    "return_to_home": "Torna alla home",
+    "@return_to_home": {
+      "description": "Testo per il pulsante per tornare alla pagina iniziale"
+    },
+    
+    "refresh_error": "Errore durante l'aggiornamento",
+    "@refresh_error": {
+      "description": "Messaggio mostrato quando si verifica un errore durante l'aggiornamento"
+    },
+
+    "loading_error": "Errore durante il caricamento",
+    "@refresh_error": {
+      "description": "Messaggio mostrato quando si verifica un errore durante il caricamento"
+    },
+    
+    "position_ok": "Posizione OK",
+    "@position_ok": {
+      "description": "Messaggio mostrato quando l'utente si trova entro il raggio della posizione dell'evento"
+    },
+    
+    "too_far_from_event": "Sei troppo lontano dall'evento",
+    "@too_far_from_event": {
+      "description": "Messaggio mostrato quando l'utente è troppo lontano dalla posizione dell'evento"
+    },
+    
+    "dismiss": "Chiudi",
+    "@dismiss": {
+      "description": "Etichetta per l'azione di chiusura nelle snackbar"
+    },
+    
+    "ranking": "Classifica",
+    "@ranking": {
+      "description": "Titolo della modale della classifica"
+    },
+    
+    "no_photos_in_ranking": "Nessuna foto in classifica",
+    "@no_photos_in_ranking": {
+      "description": "Messaggio mostrato quando non ci sono foto nella classifica"
+    },
+    
+    "event_title": "Evento {name}",
+    "@event_title": {
+      "description": "Titolo della pagina dell'evento con un segnaposto per il nome dell'evento",
+      "placeholders": {
+        "name": {}
+      }
+    },
+    
+    "no_photos": "Nessuna foto",
+    "@no_photos": {
+      "description": "Messaggio mostrato quando non ci sono foto dell'evento"
+    },
+    
+    "likes": "{count} mi piace",
+    "@likes": {
+      "description": "Testo che mostra il numero di mi piace per una foto",
+      "placeholders": {
+        "count": {}
+      }
+    },
+    
+    "image_not_available": "Immagine non disponibile",
+    "@image_not_available": {
+      "description": "Messaggio mostrato quando un'immagine non riesce a caricarsi"
+    },
+    
+    "no_details_available": "Nessun dettaglio disponibile",
+    "@no_details_available": {
+      "description": "Messaggio mostrato quando non ci sono dettagli sulla foto disponibili"
+    },
+    
+    "operation_error": "Errore durante l'operazione",
+    "@operation_error": {
+      "description": "Messaggio di errore generico per operazioni fallite"
+    },
+    
+    "swipe_up_for_details": "Scorri verso l'alto per i dettagli",
+    "@swipe_up_for_details": {
+      "description": "Istruzione mostrata per scorrere verso l'alto per i dettagli della foto"
+    },
+    
+    "photo_details": "Dettagli foto",
+    "@photo_details": {
+      "description": "Titolo della modale dei dettagli della foto"
+    },
+    
+    "type": "Tipo: {value}",
+    "@type": {
+      "description": "Etichetta per il campo del tipo nei dettagli della foto",
+      "placeholders": {
+        "value": {}
+      }
+    },
+    
+    "brand_input_label": "Marca",
+    "@brand_input_label": {
+      "description": "Etichetta per il campo di input della marca nel modulo"
+    },
+    
+  
+    "model_input_label": "Modello",
+    "@model_input_label": {
+      "description": "Etichetta per il campo di input del modello nel modulo"
+    },
+
+    "feedback_input_label": "Feedback",
+    "@feedback_input_label": {
+      "description": "Etichetta per il campo di input del feedback nel modulo"
+    },
+
+    "brand": "Marca: {value}",
+    "@brand": {
+      "description": "Etichetta per il campo della marca nei dettagli della foto",
+      "placeholders": {
+        "value": {}
+      }
+    },
+    "model": "Modello: {value}",
+    "@model": {
+      "description": "Etichetta per il campo del modello nei dettagli della foto",
+      "placeholders": {
+        "value": {}
+      }
+    },
+    "feedback": "Feedback: {value}",
+    "@feedback": {
+      "description": "Etichetta per il campo del feedback nei dettagli della foto",
+      "placeholders": {
+        "value": {}
+      }
+    },
+
+    
+    "photo_saved_successfully": "Foto salvata con successo",
+    "@photo_saved_successfully": {
+      "description": "Messaggio mostrato quando una foto viene salvata con successo"
+    },
+
+    "try_again": "Riprova",
+    "@try_again": {
+      "description": "Riprova"
+    },
+
+    "no_photos_saved": "Nessuna foto salvata",
+    "@no_photos_save": {
+      "description": "Nessuna foto salvata"
+    },
+
+    "photos_saved": "Le foto che salvi appariranno qui",
+    "@photos_save": {
+      "description": "Foto salvate"
+    },
+
+    "load_image_error": "Impossibile caricare l'immagine",
+    "@load_image_error": {
+      "description": "Errore nel caricamento dell'immagine"
+    },
+    
+    
+    "save_photo_error": "Impossibile salvare la foto. Riprova più tardi.",
+    "@save_photo_error": {
+      "description": "Messaggio mostrato quando il salvataggio di una foto fallisce"
+    },
+
+   
+  
+    "forgot_password_title": "Password dimenticata",
+    "@forgot_password_title": {
+      "description": "Titolo della pagina di password dimenticata"
+    },
+    
+    "enter_email_instructions": "Inserisci la tua email per ricevere un link per reimpostare la password.",
+    "@enter_email_instructions": {
+      "description": "Istruzioni mostrate sopra il campo di input dell'email"
+    },
+    
+    "email_label": "Email",
+    "@email_label": {
+      "description": "Etichetta per il campo di input dell'email"
+    },
+    
+    "send_reset_email": "Invia email di reimpostazione",
+    "@send_reset_email": {
+      "description": "Testo per il pulsante per inviare l'email di reimpostazione"
+    },
+    
+    "reset_email_sent": "Email di reimpostazione inviata a {email}",
+    "@reset_email_sent": {
+      "description": "Messaggio mostrato quando l'email di reimpostazione viene inviata con successo",
+      "placeholders": {
+        "email": {}
+      }
+    },
+    
+    "invalid_email": "Email non valida.",
+    "@invalid_email": {
+      "description": "Messaggio di errore per un formato email non valido"
+    },
+    
+    "user_not_found": "Utente non trovato.",
+    "@user_not_found": {
+      "description": "Messaggio di errore quando non viene trovato un utente con l'email fornita"
+    },
+    
+    "something_went_wrong": "Qualcosa è andato storto.",
+    "@something_went_wrong": {
+      "description": "Messaggio di errore generico per problemi imprevisti"
+    },
+    
+    "unknown_error": "Errore sconosciuto.",
+    "@unknown_error": {
+      "description": "Messaggio di errore per un errore non specificato"
+    },
+    
+    "enter_valid_email": "Inserisci un'email valida.",
+    "@enter_valid_email": {
+      "description": "Messaggio mostrato quando il campo email è vuoto o non valido"
+    },
+
+ 
+  
+    "error_title": "Errore",
+    "@error_title": {
+      "description": "Titolo mostrato nel dialogo quando si verifica un errore"
+    },
+    
+    "email_not_available": "Email non disponibile",
+    "@email_not_available": {
+      "description": "Messaggio mostrato quando l'email è nulla"
+    },
+    
+    "close": "Chiudi",
+    "@close": {
+      "description": "Testo per il pulsante per chiudere il dialogo"
+    },
+    
+    "share_profile_title": "Condividi profilo",
+    "@share_profile_title": {
+      "description": "Titolo del dialogo di condivisione del profilo"
+    },
+    
+    "profile_link_label": "Link del profilo:",
+    "@profile_link_label": {
+      "description": "Etichetta mostrata sopra l'URL del profilo"
+    },
+    
+    "copy_link": "Copia link",
+    "@copy_link": {
+      "description": "Testo del suggerimento per il pulsante di copia"
+    },
+    
+    "link_copied": "Link copiato negli appunti",
+    "@link_copied": {
+      "description": "Messaggio mostrato quando il link viene copiato negli appunti"
+    },
+    
+    "share": "Condividi",
+    "@share": {
+      "description": "Testo per il pulsante di condivisione"
+    },
+    
+    "view_my_profile": "Visualizza il mio profilo: {url}",
+    "@view_my_profile": {
+      "description": "Testo usato quando si condivide il link del profilo",
+      "placeholders": {
+        "url": {}
+      }
+    },
+    
+    "share_profile_subject": "Condividi profilo",
+    "@share_profile_subject": {
+      "description": "Oggetto usato quando si condivide il link del profilo"
+    },
+
+   
+    "loading": "Caricamento",
+    "@loading": {
+      "description": "Messaggio mostrato nei dialoghi di caricamento"
+    },
+    
+    "refresh_error": "Errore durante l'aggiornamento",
+    "@refresh_error": {
+      "description": "Messaggio mostrato quando si verifica un errore durante l'aggiornamento"
+    },
+    
+    "camera_permission_title": "Permesso fotocamera",
+    "@camera_permission_title": {
+      "description": "Titolo del dialogo di permesso per la fotocamera"
+    },
+    
+    "camera_permission_message": "Per utilizzare questa funzione, devi concedere i permessi per la fotocamera.",
+    "@camera_permission_message": {
+      "description": "Messaggio nel dialogo di permesso per la fotocamera"
+    },
+    
+    "cancel": "Annulla",
+    "@cancel": {
+      "description": "Testo per i pulsanti di annullamento"
+    },
+    
+    "open_settings": "Apri impostazioni",
+    "@open_settings": {
+      "description": "Testo per il pulsante per aprire le impostazioni dell'app"
+    },
+    
+    "photo_not_uploaded": "Foto non caricata",
+    "@photo_not_uploaded": {
+      "description": "Messaggio di errore quando il caricamento della foto fallisce"
+    },
+    
+    "too_far_from_event": "Foto non caricata, sei troppo lontano dall'evento",
+    "@too_far_from_event": {
+      "description": "Messaggio di errore quando l'utente è troppo lontano dalla posizione dell'evento"
+    },
+    
+    "photo_uploaded_success": "Foto caricata con successo",
+    "@photo_uploaded_success": {
+      "description": "Messaggio di successo quando la foto viene caricata senza evento"
+    },
+    
+    "photo_uploaded_event_success": "Foto caricata nell'evento con successo!",
+    "@photo_uploaded_event_success": {
+      "description": "Messaggio di successo quando la foto viene caricata in un evento"
+    },
+    
+    "select_event": "Seleziona un evento",
+    "@select_event": {
+      "description": "Titolo del dialogo di selezione dell'evento"
+    },
+    
+    "code_label": "Codice: {code}",
+    "@code_label": {
+      "description": "Etichetta che mostra il codice dell'evento",
+      "placeholders": {
+        "code": {}
+      }
+    },
+    
+    "choose_event": "Scegli evento",
+    "@choose_event": {
+      "description": "Testo per il pulsante per scegliere un evento"
+    },
+    
+    "upload_without_event": "Carica senza evento",
+    "@upload_without_event": {
+      "description": "Testo per il pulsante per caricare senza selezionare un evento"
+    },
+    
+    "upload_photo": "Carica foto",
+    "@upload_photo": {
+      "description": "Titolo del dialogo di caricamento della foto"
+    },
+    
+    "event_enrollment_prompt": "Sei iscritto ad alcuni eventi. Vuoi caricare la foto in uno di essi?",
+    "@event_enrollment_prompt": {
+      "description": "Richiesta che chiede se l'utente vuole caricare in un evento"
+    },
+    
+    "uploading_photo": "Caricamento foto...",
+    "@uploading_photo": {
+      "description": "Messaggio mostrato durante il caricamento di una foto"
+    },
+    
+    "details_uploaded_success": "Dettagli caricati con successo",
+    "@details_uploaded_success": {
+      "description": "Messaggio di successo quando i dettagli dell'outfit vengono caricati"
+    },
+    
+    "details_error": "Errore nei dettagli",
+    "@details_error": {
+      "description": "Messaggio di errore quando il caricamento dei dettagli dell'outfit fallisce"
+    },
+    
+    "all_items_uploaded_success": "Tutti gli elementi caricati con successo",
+    "@all_items_uploaded_success": {
+      "description": "Messaggio di successo quando tutti gli elementi dell'outfit vengono caricati"
+    },
+    
+    "item_upload_error": "Errore nel caricamento dei dettagli per {item}",
+    "@item_upload_error": {
+      "description": "Messaggio di errore quando il caricamento dei dettagli per un elemento specifico fallisce",
+      "placeholders": {
+        "item": {}
+      }
+    },
+    
+    "gallery": "Galleria",
+    "@gallery": {
+      "description": "Etichetta per l'opzione galleria"
+    },
+    
+    "camera": "Fotocamera",
+    "@camera": {
+      "description": "Etichetta per l'opzione fotocamera"
+    },
+    
+    "select_outfit_items": "Seleziona gli elementi del tuo outfit",
+    "@select_outfit_items": {
+      "description": "Titolo del foglio di selezione degli elementi dell'outfit"
+    },
+    
+    "save_outfit": "Salva outfit ({details}/{total} dettagli aggiunti)",
+    "@save_outfit": {
+      "description": "Testo per il pulsante di salvataggio dell'outfit con conteggio dei dettagli",
+      "placeholders": {
+        "details": {},
+        "total": {}
+      }
+    },
+    
+    "selected_items": "Elementi selezionati:",
+    "@selected_items": {
+      "description": "Etichetta per la lista degli elementi selezionati"
+    },
+    
+    "edit": "Modifica",
+    "@edit": {
+      "description": "Testo per il pulsante di modifica"
+    },
+    
+    "add_details": "Aggiungi dettagli",
+    "@add_details": {
+      "description": "Testo per il pulsante per aggiungere dettagli"
+    },
+    
+    "details_item": "Dettagli {item}",
+    "@details_item": {
+      "description": "Titolo del modulo dei dettagli per un elemento specifico",
+      "placeholders": {
+        "item": {}
+      }
+    },
+    
+    "brand_label": "Marca",
+    "@brand_label": {
+      "description": "Etichetta per il campo di input della marca"
+    },
+    
+    "model_label": "Modello/Collezione",
+    "@model_label": {
+      "description": "Etichetta per il campo di input del modello"
+    },
+    
+    "feedback_label": "Feedback: {value}",
+    "@feedback_label": {
+      "description": "Etichetta per il campo del feedback nei dettagli della foto",
+      "placeholders": {
+        "value": {}
+      }
+    },
+    
+    "enter_brand": "Inserisci il nome della marca",
+    "@enter_brand": {
+      "description": "Messaggio di validazione per il campo della marca"
+    },
+    
+    "back": "Indietro",
+    "@back": {
+      "description": "Testo per il pulsante indietro"
+    },
+    
+    "save": "Salva",
+    "@save": {
+      "description": "Testo per il pulsante di salvataggio"
+    },
+    
+    "camera_opening": "Apertura fotocamera...",
+    "@camera_opening": {
+      "description": "Messaggio mostrato durante l'apertura della fotocamera"
+    },
+    
+    "gallery_opening": "Apertura galleria...",
+    "@gallery_opening": {
+      "description": "Messaggio mostrato durante l'apertura della galleria"
+    },
+    
+    "camera_error": "Si è verificato un errore con la fotocamera",
+    "@camera_error": {
+      "description": "Messaggio di errore quando la fotocamera fallisce"
+    },
+    
+    "gallery_error": "Si è verificato un errore con la galleria",
+    "@gallery_error": {
+      "description": "Messaggio di errore quando la galleria fallisce"
+    },
+    
+    "event_check": "Controllo eventi...",
+    "@event_check": {
+      "description": "Messaggio mostrato durante il controllo dell'iscrizione agli eventi"
+    },
+    
+    "generic_error": "Si è verificato un errore",
+    "@generic_error": {
+      "description": "Messaggio di errore generico"
+    },
+    
+    "no_photos_available": "Nessuna foto disponibile",
+    "@no_photos_available": {
+      "description": "Messaggio mostrato quando non ci sono foto"
+    },
+    
+    "points_label": "{points} punti",
+    "@points_label": {
+      "description": "Etichetta che mostra i punti dell'utente",
+      "placeholders": {
+        "points": {}
+      }
+    },
+    
+    "save_label": "{save} salvataggi",
+    "@save_label": {
+      "description": "Etichetta che mostra i salvataggi dell'utente",
+      "placeholders": {
+        "save": {}
+      }
+    },
+    
+    "photo_deleted_success": "Foto eliminata con successo",
+    "@photo_deleted_success": {
+      "description": "Messaggio di successo quando una foto viene eliminata"
+    },
+    
+    "photo_deletion_error": "Errore: impossibile eliminare la foto",
+    "@photo_deletion_error": {
+      "description": "Messaggio di errore quando l'eliminazione della foto fallisce"
+    },
+    
+    "connection_error": "Errore di connessione",
+    "@connection_error": {
+      "description": "Messaggio di errore per problemi di rete"
+    },
+    
+    "profiles_title": "Profili",
+    "@profiles_title": {
+      "description": "Titolo del dialogo dei risultati di ricerca"
+    },
+    
+    "close": "Chiudi",
+    "@close": {
+      "description": "Testo per il pulsante di chiusura"
+    },
+    
+    "search_hint": "Cerca...",
+    "@search_hint": {
+      "description": "Testo di suggerimento per il campo di ricerca"
+    },
+    
+    "menu": "Menu",
+    "@menu": {
+      "description": "Titolo del cassetto di navigazione"
+    },
+    
+    "home": "Home",
+    "@home": {
+      "description": "Etichetta per l'elemento del menu home"
+    },
+    
+    "scoreboard": "Classifica",
+    "@scoreboard": {
+      "description": "Etichetta per l'elemento del menu classifica"
+    },
+    
+    "event": "Evento",
+    "@event": {
+      "description": "Etichetta per l'elemento del menu evento"
+    },
+    
+    "save_menu": "Salva",
+    "@save_menu": {
+      "description": "Etichetta per l'elemento del menu salva"
+    },
+    
+    "connect": "Connetti",
+    "@connect": {
+      "description": "Etichetta per l'elemento del menu connetti"
+    },
+    
+    "settings": "Impostazioni",
+    "@settings": {
+      "description": "Etichetta per l'elemento del menu impostazioni"
+    },
+    
+    "logout": "Esci",
+    "@logout": {
+      "description": "Etichetta per il pulsante di logout"
+    },
+    
+    "email_not_available": "Email non disponibile",
+    "@email_not_available": {
+      "description": "Messaggio mostrato quando l'email non è disponibile"
+    },
+    
+    "photo_deletion": "Eliminazione foto",
+    "@photo_deletion": {
+      "description": "Messaggio mostrato durante l'eliminazione di una foto"
+    },
+    
+    "confirm_deletion": "Conferma eliminazione",
+    "@confirm_deletion": {
+      "description": "Titolo del dialogo di conferma dell'eliminazione della foto"
+    },
+    
+    "delete_confirmation": "Sei sicuro di voler eliminare questa foto?",
+    "@delete_confirmation": {
+      "description": "Messaggio nel dialogo di conferma dell'eliminazione della foto"
+    },
+    
+    "delete": "Elimina",
+    "@delete": {
+      "description": "Testo per il pulsante di eliminazione"
+    },
+    
+    "photo_saved_success": "Foto salvata con successo",
+    "@photo_saved_success": {
+      "description": "Messaggio di successo quando una foto viene salvata"
+    },
+    
+    "save_photo_error": "Impossibile salvare la foto. Riprova più tardi.",
+    "@save_photo_error": {
+      "description": "Messaggio di errore quando il salvataggio di una foto fallisce"
+    },
+    
+    "operation_error": "Errore durante l'operazione",
+    "@operation_error": {
+      "description": "Messaggio di errore generico per operazioni fallite"
+    },
+    
+    "photo_details": "Dettagli foto",
+    "@photo_details": {
+      "description": "Titolo della modale dei dettagli della foto"
+    },
+    
+    "type_label": "Tipo: {value}",
+    "@type_label": {
+      "description": "Etichetta per il campo del tipo nei dettagli della foto",
+      "placeholders": {
+        "value": {}
+      }
+    },
+    
+    "brand_label": "Marca: {value}",
+    "@brand_label": {
+      "description": "Etichetta per il campo della marca nei dettagli della foto",
+      "placeholders": {
+        "value": {}
+      }
+    },
+    
+    "model_label": "Modello: {value}",
+    "@model_label": {
+      "description": "Etichetta per il campo del modello nei dettagli della foto",
+      "placeholders": {
+        "value": {}
+      }
+    },
+    
+    "feedback_label": "Feedback: {value}",
+    "@feedback_label": {
+      "description": "Etichetta per il campo del feedback nei dettagli della foto",
+      "placeholders": {
+        "value": {}
+      }
+    },
+    
+    "swipe_up_for_details": "Scorri verso l'alto per i dettagli",
+    "@swipe_up_for_details": {
+      "description": "Istruzione mostrata per scorrere verso l'alto per i dettagli della foto"
+    },
+    
+    "username_updated_success": "Nome utente aggiornato con successo",
+    "@username_updated_success": {
+      "description": "Messaggio di successo quando il nome utente viene aggiornato"
+    },
+    
+    "username_update_failed": "Nome utente non aggiornato",
+    "@username_update_failed": {
+      "description": "Messaggio di errore quando l'aggiornamento del nome utente fallisce"
+    },
+
+    "already_save": "Hai già salvato questa foto",
+    "@already_save": {
+      "description": "Hai già salvato"
+    }
+}
