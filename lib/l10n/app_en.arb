@@ -1028,7 +1028,19 @@
     "already_save": "You have already saved this photo",
     "@already_save": {
       "description": "already_save"
-    }
+    },
+
+    "send_report":"Send report",
+    "send_report_request":"Do you want to send a report for this photo?",
+    "send":"Send",
+    "report_ok":"Report sent successfully",
+    "report_error":"Error sending report"
+
+
+
+
+
+
 
     
 

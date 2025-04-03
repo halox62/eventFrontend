@@ -1028,5 +1028,11 @@
     "already_save": "Hai già salvato questa foto",
     "@already_save": {
       "description": "Hai già salvato"
-    }
+    },
+
+    "send_report":"Invia report",
+    "send_report_request":"Vuoi inviare un report per questa foto?",
+    "send":"Invia",
+    "report_ok":"Report inviato con successo",
+    "report_error":"Errore nell'invio del report"
 }

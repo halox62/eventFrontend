@@ -1185,31 +1185,7 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                       );
                     },
                   ),
-                  const SizedBox(height: 20),
-                  if (selectedTypes.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: ElevatedButton(
-                        onPressed: itemsDetails.length == selectedTypes.length
-                            ? () async {
-                                if (id != "-1") {
-                                  Navigator.pop(context);
-                                  await _uploadAllItems(itemsDetails, id);
-                                }
-                              }
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          minimumSize: const Size(double.infinity, 50),
-                        ),
-                        child: Text(
-                          AppLocalizations.of(context).save_outfit(
-                              itemsDetails.length.toString(),
-                              selectedTypes.length.toString()),
-                        ),
-                      ),
-                    ),
-                  const SizedBox(height: 10),
+
                   if (selectedTypes.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1254,6 +1230,33 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                         ],
                       ),
                     ),
+
+                  // Pulsante save_outfit spostato alla fine
+                  const SizedBox(height: 20),
+                  if (selectedTypes.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: ElevatedButton(
+                        onPressed: itemsDetails.length == selectedTypes.length
+                            ? () async {
+                                if (id != "-1") {
+                                  Navigator.pop(context);
+                                  await _uploadAllItems(itemsDetails, id);
+                                }
+                              }
+                            : null,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          minimumSize: const Size(double.infinity, 50),
+                        ),
+                        child: Text(
+                          AppLocalizations.of(context).save_outfit(
+                              itemsDetails.length.toString(),
+                              selectedTypes.length.toString()),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 20),
                 ],
               );
             }
@@ -1938,22 +1941,6 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
               );
             },
           ),
-          const Divider(),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: FilledButton.tonalIcon(
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color.fromRGBO(177, 233, 144, 1),
-                foregroundColor: Colors.black,
-              ),
-              onPressed: () {
-                Navigator.pop(context);
-                signOut();
-              },
-              icon: const Icon(Icons.logout),
-              label: Text(AppLocalizations.of(context).logout),
-            ),
-          ),
         ],
       ),
       body: RefreshIndicator(
@@ -2133,6 +2120,10 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
                                   children: [
                                     Expanded(
                                       child: GestureDetector(
+                                        onLongPress: () {
+                                          showReportDialog(context, ids[index],
+                                              images[index]);
+                                        },
                                         onTap: () {
                                           _handleImageTap(index);
                                         },
@@ -2313,6 +2304,94 @@ class _HomepageState extends State<Homepage> with TickerProviderStateMixin {
         ),
       ),
     );
+  }
+
+  Future<void> showReportDialog(
+      BuildContext context, String index, String image) async {
+    final TextEditingController titleController = TextEditingController();
+    final TextEditingController descriptionController = TextEditingController();
+
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(AppLocalizations.of(context).send_report),
+          content: Text(AppLocalizations.of(context).send_report_request),
+          /*SingleChildScrollView(
+            
+            child: ListBody(
+             
+                children: <Widget>[
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Titolo',
+                    hintText: 'Inserisci un titolo per la segnalazione',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Descrizione',
+                    hintText: 'Descrivi il problema in dettaglio',
+                  ),
+                  maxLines: 5,
+                ),
+              ],
+                ),
+          ),*/
+          actions: <Widget>[
+            TextButton(
+              child: Text(AppLocalizations.of(context).cancel),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            ElevatedButton(
+              child: Text(AppLocalizations.of(context).send),
+              onPressed: () {
+                _sendReport(index, image);
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _sendReport(String index, String image) async {
+    try {
+      final response = await http.post(
+        Uri.parse('https://$host/report'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'index': index,
+          'image': image,
+          'timestamp': DateTime.now().toIso8601String(),
+        }),
+      );
+
+      if (mounted) {
+        setState(() {});
+
+        if (response.statusCode == 200) {
+          _showOKSnackbar(AppLocalizations.of(context).report_ok);
+        } else {
+          _showErrorSnackbar(AppLocalizations.of(context).report_error);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {});
+        _showErrorSnackbar(AppLocalizations.of(context).report_error);
+      }
+    }
   }
 
   Future<void> _handleImageTap(int index) async {
